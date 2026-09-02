@@ -6,6 +6,95 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-06 (4) — Phase 0 implementation: all five repos scaffolded and verified
+
+**Asked:** "Let's start implementing. Go ahead and do the implementations
+from top to bottom... complete everything that can be done in local."
+Also asked whether to continue in this session or start a new one.
+
+**Decision on session structure:** recommended separate sessions per repo
+going forward (each repo's `CLAUDE.md` is self-contained for exactly this
+reason), but did the one genuinely shared, foundational piece
+(`Lakbay.Contracts`) plus a first pass at the rest here, since Phase 0
+scaffolding is mechanical and benefited from staying in one thread this
+first time.
+
+**What changed — real, verified, not just planned:**
+
+- **Toolchain check:** .NET SDK 10.0.400, Node 24.18.0 confirmed present.
+  Docker Desktop was **not** installed — flagged immediately rather than
+  assumed; user chose to install it (`winget install -e --id
+  Docker.DockerDesktop`) while everything Docker-independent proceeded in
+  parallel.
+- **`Lakbay.Contracts`:** wrote `schema/lakbay.graphql` v0, a hand-written
+  C# class library mirroring it, and a TypeScript package generating real
+  types via `@graphql-codegen` — ran the generator, verified `tsc
+  --noEmit` clean. Committed the generated `types.ts` on purpose (it's
+  shipped output, not a disposable build artifact — updated `.gitignore`'s
+  reasoning accordingly).
+- **`Lakbay.Booking`:** scaffolded minimal API + xUnit, `dotnet test`
+  green (1 passed).
+- **`Lakbay.AvailabilityApi`:** scaffolded per ADR-0009's two-project
+  split — query API (HotChocolate) and a separate
+  `Lakbay.AvailabilityApi.Sync` Azure Function project (installed
+  `Microsoft.Azure.Functions.Worker.ProjectTemplates` fresh, swapped its
+  default HTTP extension for the Service Bus one actually needed). Fixed
+  a `FunctionsApplicationBuilder`/`ConfigureFunctionsWorkerDefaults` API
+  mismatch the newer minimal builder pattern doesn't need. `dotnet test`
+  green.
+- **`Lakbay.Web`:** `create-next-app@latest` (Next.js 16.3.4, React
+  19.2.8) — hit an npm package-name validation error scaffolding directly
+  into the capital-letter `Lakbay.Web` folder, worked around by scaffolding
+  into a temp lowercase subfolder and moving contents up, merging the
+  three files that already existed (`.gitignore`, `CLAUDE.md`, `README.md`)
+  by hand rather than overwriting. Added Redux Toolkit + RTK Query at
+  latest, wired a real `availabilityApi` slice and Redux `Provider`, built
+  and linted clean.
+- **`Lakbay.Cms`:** installed `Umbraco.Templates` fresh — **discovered
+  latest is 18.1.1, not 17** as every prior document assumed (the same
+  category of mistake as the original "MockApi" framing: stated without
+  checking). Scaffolded, confirmed via an actual browser screenshot that
+  it boots to the real "Install Umbraco" wizard. Adapted the official
+  `dotnet new umbraco-compose` template's SQL Server container (Dockerfile
+  + setup/healthcheck scripts) into a trimmed, database-only
+  `docker-compose.yml` matching ADR-0005 exactly — the official template
+  also containerizes the Umbraco app itself, which ADR-0005 deliberately
+  doesn't call for; one shared SQL Server instance creates both `umbracoDb`
+  and `lakbayBookingDb`. Initialized `.NET user-secrets` for the connection
+  string (never `appsettings.json`, keeps the SA password out of any
+  committed file).
+- **Cross-repo end-to-end proof:** ran `Lakbay.AvailabilityApi`'s query
+  API and `Lakbay.Web`'s dev server simultaneously. First attempt failed
+  (CORS — the browser's preflight `OPTIONS /graphql` 404'd with no CORS
+  middleware configured); fixed by adding a configurable CORS policy read
+  from `Cors:AllowedOrigins`, and separately caught that `dotnet run
+  --no-launch-profile` defaults to the `Production` environment, so
+  `appsettings.Development.json` wasn't even being loaded — fixed by
+  setting `ASPNETCORE_ENVIRONMENT=Development` explicitly. After both
+  fixes: the homepage's `useGetStatusQuery()` round-tripped for real and
+  rendered "Lakbay.AvailabilityApi says: ok" in a live browser screenshot.
+- **Preview tooling gotcha:** `preview_start` resolves `.claude/launch.json`
+  configs from the fixed workspace root
+  (`D:\_DEV\Personal_Projects\.claude\launch.json`), not from wherever a
+  Bash shell's `cd` happens to be, and not from a per-repo
+  `Lakbay.Web/.claude/launch.json` — a first attempt silently launched an
+  unrelated existing config (`devhub-web`) instead of erroring. Fixed by
+  adding the `lakbay-web-dev` entry to the workspace-root file, using
+  `npm --prefix <path>` since that file format has no `cwd` field.
+- Every doc updated to match reality: the Umbraco 17→18 correction
+  propagated via `sed` across the living docs (historical ADR-0001 text
+  left alone, matching the project's own convention); `04_TASKS.md`
+  rewritten with what's actually done vs. genuinely Docker-blocked; all
+  five repos' `Docs/DEVELOPER_HANDBOOK.md` written from what was proven,
+  including the exact commands that failed and what fixed them.
+
+**What's next:** Docker Desktop finishing install, then `docker compose
+up -d` from `Lakbay.Cms`, completing the Umbraco install wizard for real,
+and Phase 1's real `Lakbay.AvailabilityApi` resolvers against seeded
+MongoDB data.
+
+---
+
 ## 2026-09-06 (3) — AvailabilityApi rename + split, ordering guard, real double-booking fix, block rendering
 
 **Asked:** Four things in one message. (1) Decouple event consumption

@@ -44,7 +44,7 @@ final branding/trademark is a marketing decision, not a technical one):
 | Repo | Role | Stack |
 |---|---|---|
 | `Lakbay.Docs` | This repo. Platform plan, architecture guide, ADRs, devlog. No app code. | Markdown |
-| `Lakbay.Cms` | Unified editorial CMS + product catalog — ECMS and PCMS merged into one Umbraco solution | Umbraco 17, .NET |
+| `Lakbay.Cms` | Unified editorial CMS + product catalog — ECMS and PCMS merged into one Umbraco solution | Umbraco 18, .NET |
 | `Lakbay.Booking` | Orders, basket, availability calendar, payment orchestration — deliberately separate from the CMS | .NET minimal API |
 | `Lakbay.Web` | Public storefront: marketing pages, catalog browsing, booking flow | Next.js, Redux Toolkit + RTK Query |
 | `Lakbay.AvailabilityApi` | Real, permanently deployed product-search service — denormalized read model synced from `Lakbay.Cms`, modeled on Hotelplan's `api-sphinx`/Manticore. **Not a mock** (renamed from `Lakbay.MockApi`) | ASP.NET Core, HotChocolate, MongoDB.Driver |

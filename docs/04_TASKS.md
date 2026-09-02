@@ -1,6 +1,7 @@
 # Tasks — Current Status
 
-**Current phase:** Phase 0 — Foundation & scaffolding (see `02_BUILD_PLAN.md`)
+**Current phase:** Phase 0 — Foundation & scaffolding, functionally
+complete for everything doable without Docker (see `02_BUILD_PLAN.md`).
 
 ## Done
 
@@ -49,40 +50,75 @@
       a React block-registry in `Lakbay.Web` mapping element-type alias to
       component, matching the standard headless-CMS component-mapping
       pattern (ADR-0012) — 2026-09-06
+- [x] **Implementation started — Phase 0 scaffolding, all five repos,
+      2026-09-06:**
+  - `Lakbay.Contracts`: `schema/lakbay.graphql` (v0 — Product,
+    ProductLine, Destination, incl. `sourceUpdatedUtc` per ADR-0010); a
+    net10.0 C# class library mirroring it by hand; a `@lakbay/contracts`
+    npm package generating TS types via `@graphql-codegen` — both sides
+    build/type-check clean.
+  - `Lakbay.Booking`: minimal API + xUnit, `/health` endpoint, boots and
+    tests green.
+  - `Lakbay.AvailabilityApi`: query API (HotChocolate) + a separate
+    `Lakbay.AvailabilityApi.Sync` Azure Function project (ADR-0009), both
+    build; query API boots, introspection/query test green.
+  - `Lakbay.Web`: Next.js 16 + Redux Toolkit + RTK Query, builds and
+    lints clean.
+  - `Lakbay.Cms`: Umbraco **18.1.1** (not 17 — corrected; see below)
+    scaffolded, confirmed booting to the real install wizard via browser
+    screenshot.
+  - **Verified end-to-end, not just per-repo:** ran `Lakbay.Web` and
+    `Lakbay.AvailabilityApi` simultaneously; the homepage's RTK Query call
+    round-tripped through a real GraphQL request and rendered the live
+    response in the browser (CORS configured on the API side to make this
+    work).
+  - All five repos' `Docs/DEVELOPER_HANDBOOK.md` written from what was
+    actually proven working, not speculatively.
+- [x] **Version correction:** every prior document said "Umbraco 17."
+      Checking `dotnet new install Umbraco.Templates` on 2026-09-06 showed
+      the real latest is **18.1.1** — corrected across all living docs
+      (historical ADR-0001 text left as-is, matching the project's own
+      "don't rewrite point-in-time records" convention).
+- [x] SQL Server (Docker, Developer Edition) Compose file written for
+      `Lakbay.Cms` (adapted from the official `dotnet new umbraco-compose`
+      template, trimmed to database-only per ADR-0005 — the app runs
+      natively, never in the compose file); `Database/setup.sql` creates
+      both `umbracoDb` and `lakbayBookingDb` on one shared instance — not
+      yet run, Docker Desktop install was still in progress at end of
+      session.
 
-## Not done — rest of Phase 0
+## Not done — rest of Phase 0 (all blocked on Docker Desktop)
 
-- [ ] Confirm exact local toolchain versions (.NET SDK for Umbraco 17/
-      Booking/AvailabilityApi, Node.js for Lakbay.Web only, Docker Desktop)
-      on this machine
-- [ ] `Lakbay.Contracts` schema v0 (Product, ProductLine, Destination
-      types) written and committed
-- [ ] `Lakbay.Cms` — empty Umbraco 17 solution scaffolded, boots to
-      install wizard
-- [ ] `Lakbay.Booking` — empty .NET minimal API + xUnit test project
-      scaffolded
-- [ ] `Lakbay.Web` — empty Next.js + Redux Toolkit project scaffolded
-- [ ] `Lakbay.AvailabilityApi` — empty ASP.NET Core + HotChocolate query
-      project, plus the `Lakbay.AvailabilityApi.Sync` Azure Function
-      project (ADR-0009), scaffolded; MongoDB via Docker Compose
+- [ ] Docker Desktop finish installing (`winget install -e --id
+      Docker.DockerDesktop`, needs a restart) — everything below is
+      blocked on this specifically, nothing else.
+- [ ] `docker compose up -d` from `Lakbay.Cms` — creates the shared local
+      SQL Server instance.
+- [ ] Complete the Umbraco install wizard for real (admin user + the now-
+      available database connection, via `dotnet user-secrets`, already
+      initialized for `Lakbay.Cms.Web`).
+- [ ] MongoDB for `Lakbay.AvailabilityApi` — no compose file written for
+      this yet (Phase 1 work, not blocking Phase 0's exit criteria, which
+      only required the query API to boot and answer introspection — done).
 - [ ] Decide the Cms → AvailabilityApi sync trigger mechanism (Umbraco
-      event, Service Bus message, or scheduled job) — flagged by ADR-0007
-- [ ] SQL Server (Docker, Developer Edition) Compose service defined for
-      `Lakbay.Cms` and `Lakbay.Booking`, per ADR-0005
-- [ ] CI skeleton in every repo
-- [ ] `Docs/DEVELOPER_HANDBOOK.md` stub in each of the five application
-      repos, with real (proven, not assumed) local setup steps
+      event, Service Bus message, or scheduled job) — flagged by ADR-0007,
+      genuinely Phase 1/3 work, not Phase 0.
+- [ ] CI skeleton in every repo — not started.
 - [ ] A concurrency test in `Lakbay.Booking` proving the atomic decrement
       actually prevents double-booking under simulated simultaneous
-      requests — ADR-0011, not just a sequential-call test
+      requests — ADR-0011; needs the real SQL Server connection to be
+      meaningful (SQLite/InMemory wouldn't exercise real row-locking
+      semantics), so this is genuinely Phase 4 work, not deferred Phase 0.
 - [ ] Decide: GitHub remotes for these repos, or stay local-only for now —
-      open item, needs an explicit answer, not an assumption
+      open item, needs an explicit answer, not an assumption.
 
 ## Blocked / needs a decision before it can proceed
 
 - Exact GraphQL-on-Umbraco package for `Lakbay.Cms` (see `01_CLAUDE.md`
   §6) — blocks locking `Lakbay.Contracts` schema v0 as final.
 - Package registry choice (GitHub Packages vs. Azure Artifacts) for
-  publishing `Lakbay.Contracts`.
+  publishing `Lakbay.Contracts` — not urgent; all five repos currently
+  reference it via local project/file references, which works fine for
+  single-machine local dev.
 - Production MongoDB hosting for `Lakbay.AvailabilityApi` (Azure Cosmos DB
   for MongoDB vs. MongoDB Atlas) — a Phase 5 decision, not urgent now.

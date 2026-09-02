@@ -57,7 +57,7 @@ shared contract exists before any repo starts consuming it.
       `03_ARCHITECTURE_AND_PATTERNS_GUIDE.md`,
       `06_SYSTEM_ARCHITECTURE.md`, ADR-0001 through 0007 (done
       2026-09-03 through 2026-09-06).
-- [ ] Confirm local environment: `.NET` SDK version for Umbraco 17 (verify
+- [ ] Confirm local environment: `.NET` SDK version for Umbraco 18 (verify
       the exact minimum at scaffold time — Umbraco version support moves
       faster than this doc; this same SDK now also covers `Lakbay.Booking`
       and `Lakbay.AvailabilityApi`, per [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md)),
@@ -71,7 +71,7 @@ shared contract exists before any repo starts consuming it.
       section. Publish as a versioned package (GitHub Packages or Azure
       Artifacts — pick one and record the choice as an ADR when it's
       decided).
-- [ ] `Lakbay.Cms`: empty Umbraco 17 solution scaffolded, boots to the
+- [ ] `Lakbay.Cms`: empty Umbraco 18 solution scaffolded, boots to the
       install wizard, nothing customized yet — working baseline before
       customization, same discipline as Ophir Mineral Ventures' Phase 0.
 - [ ] `Lakbay.Booking`: empty .NET minimal API solution, xUnit test

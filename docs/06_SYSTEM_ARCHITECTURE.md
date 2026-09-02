@@ -27,7 +27,7 @@ flowchart TB
     end
 
     subgraph Write["Write side — authoring & transactions"]
-        Cms["Lakbay.Cms\nUmbraco 17 — content + catalog\n(ADR-0001)"]
+        Cms["Lakbay.Cms\nUmbraco 18 — content + catalog\n(ADR-0001)"]
         Booking["Lakbay.Booking\n.NET CQRS — orders/availability\n(ADR-0002, ADR-0003)"]
     end
 
@@ -116,7 +116,7 @@ these are kept as two separate concerns.
 |---|---|
 | **Owns** | Editorial content, the product catalog (holidays, itineraries, pricing bands, media) |
 | **Does not own** | Orders, baskets, live availability (ADR-0003); public-facing page rendering (ADR-0006) |
-| **Stack** | Umbraco 17 on .NET |
+| **Stack** | Umbraco 18 on .NET |
 | **Exposes** | Umbraco Content Delivery API + a GraphQL layer matching `Lakbay.Contracts` |
 | **Consumes** | Nothing from the other services at runtime — it's the source of truth, not a consumer |
 | **Publishes** | A sync signal (mechanism TBD — Phase 1/3 decision) on every content/product publish, consumed by `Lakbay.AvailabilityApi`; Service Bus events consumed by `Lakbay.Booking` where availability affects catalog display |
