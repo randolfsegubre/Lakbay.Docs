@@ -47,10 +47,10 @@ final branding/trademark is a marketing decision, not a technical one):
 | `Lakbay.Cms` | Unified editorial CMS + product catalog — ECMS and PCMS merged into one Umbraco solution | Umbraco 17, .NET |
 | `Lakbay.Booking` | Orders, basket, availability calendar, payment orchestration — deliberately separate from the CMS | .NET minimal API |
 | `Lakbay.Web` | Public storefront: marketing pages, catalog browsing, booking flow | Next.js, Redux Toolkit + RTK Query |
-| `Lakbay.MockApi` | Disposable GraphQL/MongoDB backend mirroring `Lakbay.Contracts` — lets `Lakbay.Web` be built and tested before `Lakbay.Cms`/`Lakbay.Booking` exist | ASP.NET Core, HotChocolate, MongoDB.Driver |
+| `Lakbay.SearchApi` | Real, permanently deployed product-search service — denormalized read model synced from `Lakbay.Cms`, modeled on Hotelplan's `api-sphinx`/Manticore. **Not a mock** (renamed from `Lakbay.MockApi`) | ASP.NET Core, HotChocolate, MongoDB.Driver |
 | `Lakbay.Contracts` | Shared GraphQL SDL schema + generated TS/C# types, versioned as a package | Schema + codegen |
 
-## 3. The four load-bearing architecture decisions
+## 3. The load-bearing architecture decisions
 
 Each has a full Architecture Decision Record under `docs/adr/` — this is
 the short version; read the ADR before touching code that the decision
@@ -71,12 +71,12 @@ governs.
    a single fat service class is the exact shape that left
    `E-Commerse.AI.API`'s controllers as untestable, disconnected stubs.
    See [ADR-0002](adr/ADR-0002-cqrs-booking.md).
-4. **`Lakbay.MockApi` is .NET (HotChocolate + MongoDB.Driver), not
+4. **`Lakbay.SearchApi` is .NET (HotChocolate + MongoDB.Driver), not
    Node.js/Apollo** — the only place the original plan introduced a second
    backend language without a real requirement behind it. One backend
    language across `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.Contracts`, and
-   `Lakbay.MockApi`; only `Lakbay.Web` is genuinely a different stack. See
-   [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md).
+   `Lakbay.SearchApi`; only `Lakbay.Web` is genuinely a different stack.
+   See [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md).
 5. **Local development runs SQL Server in Docker, not Azure SQL Database**
    — Azure SQL Database is cloud-only PaaS with no local edition; it's
    used only once a live/staging environment exists (Phase 5). See
@@ -90,6 +90,25 @@ governs.
    opposite of the ECMS/Prototype hybrid (Razor page shells in the CMS
    with React embedded inside them). See
    [ADR-0006](adr/ADR-0006-headless-cms-no-razor-ui.md).
+7. **`Lakbay.SearchApi` is real, permanently deployed infrastructure, not
+   a disposable mock** — checking the actual Hotelplan `api-sphinx`
+   commit history (55 commits, described as the highest-risk-per-change
+   repo doing real price/availability search) showed the "just a mock"
+   framing was wrong from the start. It's a dedicated, denormalized search
+   read-model synced from `Lakbay.Cms`, and `Lakbay.Web` queries it in
+   production for catalog browsing/search/filtering — it is not repointed
+   away from once `Lakbay.Cms` exists. See
+   [ADR-0007](adr/ADR-0007-searchapi-is-real-not-mock.md), and
+   [06_SYSTEM_ARCHITECTURE.md](06_SYSTEM_ARCHITECTURE.md) for exactly how
+   this fits alongside `Lakbay.Cms` and `Lakbay.Booking`.
+8. **Availability changes propagate live, no polling** — a confirmed
+   booking in `Lakbay.Booking` reaches `Lakbay.SearchApi` via Service Bus,
+   which updates its read model and pushes a change notification over
+   Azure SignalR Service to any `Lakbay.Web` page currently showing that
+   listing. Deliberately not the same thing as preventing overselling
+   (that's concurrency control inside `Lakbay.Booking`, unaffected by this
+   decision). See
+   [ADR-0008](adr/ADR-0008-realtime-availability-propagation.md).
 
 ## 4. Engineering practice — non-negotiable, not aspirational
 
@@ -145,3 +164,7 @@ own `CLAUDE.md`.
   deliberately left open.
 - Regulatory: Philippine DOT accreditation requirements for listed
   operators — legal check, can gate launch, not an engineering task.
+- Exact sync trigger from `Lakbay.Cms` to `Lakbay.SearchApi` (Umbraco
+  content-cache-refresher event, Service Bus message, or scheduled
+  Hangfire job) — flagged as genuine new scope by ADR-0007, not yet
+  decided. Needs deciding before Phase 1 is considered done.

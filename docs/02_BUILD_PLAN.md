@@ -9,11 +9,17 @@ documented along the way. If the two ever conflict, `01_CLAUDE.md` wins on
 
 ## How to use this document
 
-- Work through the phases **in order**. Lakbay.Web is deliberately built
-  against `Lakbay.MockApi` *before* `Lakbay.Cms` exists (Phase 2 before
-  Phase 3) — this is not corner-cutting, it's the whole point of carrying
-  the Sphinx-API/Mantincore pattern forward: frontend work is never
-  blocked on backend availability.
+- Work through the phases **in order**. `Lakbay.Web` talks to
+  `Lakbay.SearchApi` for all catalog browsing/search from Phase 2 onward
+  — and **keeps** talking to it in production; `Lakbay.SearchApi` is real,
+  permanently deployed infrastructure (see
+  [ADR-0007](adr/ADR-0007-searchapi-is-real-not-mock.md)), not a mock
+  that gets swapped out. What changes at Phase 3 is where
+  `Lakbay.SearchApi`'s *data* comes from — hand-seeded in Phase 1, synced
+  from `Lakbay.Cms` from Phase 3 onward — not which service `Lakbay.Web`
+  talks to. This carries the Sphinx-API/Manticore pattern forward
+  faithfully: a dedicated search read-model, fed by the CMS, queried by
+  the storefront, present in production.
 - **Every phase ends with a `05_DEVLOG.md` entry** before moving to the
   next one. One entry per phase minimum — more if a session spans a phase
   boundary or something notable happened mid-phase (a blocked decision, a
@@ -30,12 +36,12 @@ documented along the way. If the two ever conflict, `01_CLAUDE.md` wins on
 
 | # | Phase | Repos | Depends on | Produces |
 |---|---|---|---|---|
-| 0 | Foundation & scaffolding | all six | — | Buildable skeleton in every repo, `Lakbay.Contracts` schema v0, ADR-0001–0003 in place |
-| 1 | Mock backend | Contracts, MockApi | 0 | GraphQL/Mongo service serving seeded PH destination data |
-| 2 | Storefront against the mock | Web | 1 | Browsable catalog site for all four product lines, zero live backend |
-| 3 | Real CMS | Cms | 0, 2 | Umbraco unified content+catalog; Web repointed at it with no frontend code changes |
+| 0 | Foundation & scaffolding | all six | — | Buildable skeleton in every repo, `Lakbay.Contracts` schema v0, ADR-0001–0007 in place |
+| 1 | Search API | Contracts, SearchApi | 0 | Real, permanent GraphQL/Mongo search service, hand-seeded with real PH destination data for now |
+| 2 | Storefront against SearchApi | Web | 1 | Browsable catalog site for all four product lines, querying `Lakbay.SearchApi` |
+| 3 | Real CMS + sync to SearchApi | Cms, SearchApi | 0, 2 | Umbraco unified content+catalog live; sync mechanism replaces SearchApi's hand-seeded data with real Cms-authored data, zero `Lakbay.Web` code changes |
 | 4 | Booking & payments | Booking | 0, 3 | End-to-end bookable holiday in staging, PayMongo sandbox integration |
-| 5 | Hosting & go-live | Cms, Booking, Web, MockApi(non-prod) | 1–4 | Live Philippines-first site, real destination content, IaC-provisioned Azure |
+| 5 | Hosting & go-live | Cms, Booking, Web, SearchApi | 1–4 | Live Philippines-first site, real destination content, IaC-provisioned Azure — all four services deployed |
 | 6 | Scale readiness | all | 5 | AKS/Stripe/Azure AI Search evaluated against real traffic, not assumed |
 
 ## Phase 0 — Foundation & scaffolding
@@ -48,16 +54,17 @@ shared contract exists before any repo starts consuming it.
 - [x] Create the six repos as git repositories under `Personal_Projects/Lakbay/`
       (done 2026-09-03).
 - [x] `Lakbay.Docs` populated: this build plan, `01_CLAUDE.md`,
-      `03_ARCHITECTURE_AND_PATTERNS_GUIDE.md`, ADR-0001 through 0003
-      (done 2026-09-03).
+      `03_ARCHITECTURE_AND_PATTERNS_GUIDE.md`,
+      `06_SYSTEM_ARCHITECTURE.md`, ADR-0001 through 0007 (done
+      2026-09-03 through 2026-09-06).
 - [ ] Confirm local environment: `.NET` SDK version for Umbraco 17 (verify
       the exact minimum at scaffold time — Umbraco version support moves
       faster than this doc; this same SDK now also covers `Lakbay.Booking`
-      and `Lakbay.MockApi`, per [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md)),
+      and `Lakbay.SearchApi`, per [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md)),
       Node.js version for `Lakbay.Web` only, and Docker Desktop (for the
       offline-runnable Compose stacks each repo will need — SQL Server for
       Cms/Booking per [ADR-0005](adr/ADR-0005-local-sql-server-not-azure-sql.md),
-      MongoDB for MockApi).
+      MongoDB for SearchApi).
 - [ ] `Lakbay.Contracts`: schema v0 — `Product`, `ProductLine`,
       `Destination` GraphQL types, matching the four product lines and the
       cluster/destination table in the Blueprint's market-research
@@ -71,9 +78,9 @@ shared contract exists before any repo starts consuming it.
       project scaffolded alongside it from the start (not deferred).
 - [ ] `Lakbay.Web`: empty Next.js (App Router) + Redux Toolkit project,
       `create-next-app` baseline committed before any real pages.
-- [ ] `Lakbay.MockApi`: empty ASP.NET Core + HotChocolate project, MongoDB
-      via Docker Compose, boots and serves an introspection query with
-      zero resolvers.
+- [ ] `Lakbay.SearchApi`: empty ASP.NET Core + HotChocolate project,
+      MongoDB via Docker Compose, boots and serves an introspection query
+      with zero resolvers.
 - [ ] CI skeleton in every repo (GitHub Actions or equivalent) — even if
       it only runs `dotnet build`/`npm ci && npm run build` at this stage.
       Real test gates arrive with each phase's own work.
@@ -83,113 +90,158 @@ shared contract exists before any repo starts consuming it.
 
 **Exit criteria:** `dotnet build`/`npm run build` succeeds in every repo
 with no errors; `Lakbay.Contracts` schema v0 is committed and referenced
-(even if unused) from both `Lakbay.Cms` and `Lakbay.MockApi`; ADR-0001–0003
-exist; a DEVLOG entry closes the phase.
+(even if unused) from both `Lakbay.Cms` and `Lakbay.SearchApi`;
+ADR-0001–0007 exist; a DEVLOG entry closes the phase.
 
-## Phase 1 — Mock backend
+## Phase 1 — Search API
 
-**Goal:** a running GraphQL/MongoDB service that speaks the `Lakbay.Contracts`
-schema, seeded with real Philippine destination data from the Blueprint's
-market research (not placeholder lorem).
+**Goal:** a running, real GraphQL/MongoDB search service that speaks the
+`Lakbay.Contracts` schema, hand-seeded with real Philippine destination
+data from the Blueprint's market research (not placeholder lorem) as a
+starting point — this hand-seeding is temporary, the *service* is not
+(see [ADR-0007](adr/ADR-0007-searchapi-is-real-not-mock.md)).
 
-**Repos:** `Lakbay.Contracts`, `Lakbay.MockApi`.
+**Repos:** `Lakbay.Contracts`, `Lakbay.SearchApi`.
 
 - Resolvers for `Product`, `ProductLine`, `Destination` queries against
-  seeded MongoDB collections.
+  seeded MongoDB collections, with the faceted-filtering shape (by
+  destination, theme, price, date) this service exists for — not just
+  flat lookups.
 - Seed data: at minimum one real destination per product line (e.g. Coron
   for Alon, Baguio for Amihan, San Fernando Pampanga for Parul, Vigan for
   Pamana) — real names and descriptions from the Blueprint's research, not
   fabricated placeholders, since this data will be visible in Phase 2's
   storefront screenshots.
+- Decide the sync trigger this service will use once `Lakbay.Cms` exists
+  (Umbraco content-cache-refresher event, Service Bus message, or
+  scheduled Hangfire job) — design the resolver/data-access layer so
+  swapping hand-seeding for a real sync job in Phase 3 doesn't require
+  reshaping the schema or resolvers, only the data-loading path.
 - CI check: schema returned by introspection is diffed against
-  `Lakbay.Contracts`' published SDL — this is the guardrail from ADR
-  discussions that keeps the mock and the eventual real backend from
-  silently drifting apart.
+  `Lakbay.Contracts`' published SDL — the guardrail that keeps this
+  service's read-model schema from drifting out of sync with
+  `Lakbay.Cms`'s write-model schema.
 - xUnit + HotChocolate's testing utilities (`IRequestExecutor` test
-  helpers), same test stack shape as `Lakbay.Cms`/`Lakbay.Booking` now
-  that this repo is .NET too (ADR-0004).
+  helpers), same test stack shape as `Lakbay.Cms`/`Lakbay.Booking` since
+  this repo is .NET too (ADR-0004).
 
 **Exit criteria:** a GraphQL Playground/introspection query against a
-locally-run `Lakbay.MockApi` returns real seeded product-line and
-destination data; schema-diff CI check is green.
+locally-run `Lakbay.SearchApi` returns real seeded product-line and
+destination data with working facet filters (destination, theme, price,
+date); schema-diff CI check is green.
 
-## Phase 2 — Storefront against the mock
+## Phase 2 — Storefront against SearchApi
 
-**Goal:** a browsable, deployable-shaped storefront with zero live backend
-dependency beyond `Lakbay.MockApi`.
+**Goal:** a browsable, deployable-shaped storefront querying
+`Lakbay.SearchApi` for all catalog browsing/search — this is the same
+querying path it will use in production, not a temporary stand-in.
 
 **Repos:** `Lakbay.Web`.
 
-- RTK Query API slice wired to `Lakbay.MockApi`'s GraphQL endpoint.
+- RTK Query API slice wired to `Lakbay.SearchApi`'s GraphQL endpoint.
 - Catalog/landing pages for all four product lines (Alon, Amihan, Parul,
-  Pamana), rendering the seeded destination data from Phase 1.
+  Pamana), rendering the seeded destination data from Phase 1, with real
+  facet filtering (destination, theme, price, date) exercised end to end
+  — this is the point of having a dedicated search service, so it should
+  be visibly working here, not deferred.
 - Redux Toolkit slices only where state is genuinely client-side (filter
   UI, basket shell — no real checkout yet, that's Phase 4).
 - Jest + React Testing Library + MSW component tests; a Playwright smoke
-  test that runs `Lakbay.Web` against `Lakbay.MockApi` in CI.
+  test that runs `Lakbay.Web` against `Lakbay.SearchApi` in CI.
 
-**Exit criteria:** the storefront is fully browsable end-to-end against
-`Lakbay.MockApi` with no manual steps; component and Playwright tests
-green in CI.
+**Exit criteria:** the storefront is fully browsable and filterable
+end-to-end against `Lakbay.SearchApi` with no manual steps; component and
+Playwright tests green in CI.
 
-## Phase 3 — Real CMS
+## Phase 3 — Real CMS + sync to SearchApi
 
-**Goal:** `Lakbay.Cms` replaces `Lakbay.MockApi` as `Lakbay.Web`'s backend
-with **zero frontend code changes** — this is the proof that the shared
-contract actually held.
+**Goal:** `Lakbay.Cms` goes live as the real content/catalog authoring
+system, and a real sync mechanism replaces `Lakbay.SearchApi`'s Phase 1
+hand-seeded data with data authored in Umbraco — with **zero
+`Lakbay.Web` code changes**, since `Lakbay.Web` never stops talking to
+`Lakbay.SearchApi`. This is the actual proof the shared contract held:
+not a backend swap, a data-source swap underneath a service whose
+interface never moved.
 
-**Repos:** `Lakbay.Cms` (primary), `Lakbay.Web` (repoint only).
+**Repos:** `Lakbay.Cms` (primary), `Lakbay.SearchApi` (sync consumer),
+`Lakbay.Web` (no code changes expected — verification only).
 
 - Content tree (pages, landing pages, block-list components) and Products
   tree (holiday records: itinerary, price bands, departure dates,
   inclusions, media, geo, product-line taxonomy) per ADR-0001.
-- Content Delivery API enabled; GraphQL layer on top matching
-  `Lakbay.Contracts` (see the open item in `01_CLAUDE.md` about which
-  package to use — resolve this before this phase starts in earnest).
+- Content Delivery API enabled on `Lakbay.Cms`; GraphQL layer on top
+  matching `Lakbay.Contracts` (see the open item in `01_CLAUDE.md` about
+  which package to use). This is the path `Lakbay.Web` may use for
+  non-search page content per ADR-0007 — not required for this phase's
+  exit criteria, but the layer should exist.
+- Build the sync mechanism decided in Phase 1: on publish in `Lakbay.Cms`,
+  push the updated product/destination record into `Lakbay.SearchApi`'s
+  MongoDB collections in the same shape its resolvers already expect.
 - Real content authored for at least the same destinations seeded in
-  Phase 1, this time through the actual Umbraco backoffice.
+  Phase 1, this time through the actual Umbraco backoffice, and confirmed
+  to arrive in `Lakbay.SearchApi` via the sync mechanism.
 - xUnit + FluentAssertions + NSubstitute for domain logic; Testcontainers
   (SQL Server) for integration tests against the real Content Delivery
-  API.
+  API; an integration test proving a `Lakbay.Cms` publish results in the
+  matching `Lakbay.SearchApi` document updating.
 
-**Exit criteria:** switching `Lakbay.Web`'s GraphQL endpoint from
-`Lakbay.MockApi` to `Lakbay.Cms` requires no frontend code changes and the
-storefront renders identically (content differences aside).
+**Exit criteria:** publishing a product change in `Lakbay.Cms`'s
+backoffice is reflected in `Lakbay.SearchApi`'s query results without any
+`Lakbay.Web` deployment or code change; the storefront shows the newly
+synced (real, Umbraco-authored) content in place of Phase 1's hand-seeded
+data.
 
 ## Phase 4 — Booking & payments
 
 **Goal:** an end-to-end bookable holiday, from catalog page to confirmed
 order, in a staging environment.
 
-**Repos:** `Lakbay.Booking` (primary), `Lakbay.Web` (checkout UI),
-`Lakbay.Cms` (Service Bus event consumption, if availability affects
-catalog display).
+**Repos:** `Lakbay.Booking` (primary), `Lakbay.SearchApi` (availability
+sync + real-time push, ADR-0008), `Lakbay.Web` (checkout UI + live
+listing updates), `Lakbay.Cms` (Service Bus event consumption, if
+availability affects catalog display).
 
 - CQRS command/query handlers per ADR-0002.
 - Basket, availability calendar, PayMongo checkout integration (sandbox).
+- Availability-check concurrency control in `ConfirmBookingCommandHandler`
+  — the actual overselling guard; explicitly separate from the real-time
+  UI propagation below (ADR-0008's context section spells out why these
+  are two different problems).
 - Hangfire-scheduled confirmation email/SMS (Twilio) on `BookingConfirmed`.
-- Service Bus wiring between `Lakbay.Booking` and `Lakbay.Cms`/`Lakbay.Web`
-  per ADR-0003.
+- Service Bus wiring: `Lakbay.Booking` publishes `AvailabilityChanged`;
+  `Lakbay.SearchApi` consumes it, updates its MongoDB read model, and
+  pushes a change notification to Azure SignalR Service; `Lakbay.Web`
+  subscribes per listing page and invalidates/refetches just that item's
+  RTK Query cache entry on notification (ADR-0008). Separately,
+  `Lakbay.Cms` consumes Service Bus events per ADR-0003 if availability
+  affects catalog display.
 - Contract tests run against both the PayMongo sandbox and a fake
   `IPaymentGateway` implementation (Liskov Substitution check, per the
   Architecture & Patterns Guide).
 
 **Exit criteria:** a full booking (browse → basket → PayMongo sandbox
 checkout → confirmation email/SMS) succeeds in staging; contract tests
-green for both real and fake payment gateway implementations.
+green for both real and fake payment gateway implementations; a second
+browser tab showing the same listing reflects a sold-out state within
+seconds of a booking being confirmed, with no manual refresh.
 
 ## Phase 5 — Hosting & go-live
 
 **Goal:** the platform is live, on real infrastructure, with real content.
 
-**Repos:** `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.Web` on Azure Container
-Apps; `Lakbay.MockApi` stays dev/demo-only, not deployed to production.
+**Repos:** `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.Web`, and
+`Lakbay.SearchApi` — all four on Azure Container Apps. `Lakbay.SearchApi`
+deploys to production alongside the others; it was never dev-only (see
+[ADR-0007](adr/ADR-0007-searchapi-is-real-not-mock.md)).
 
 - Terraform or Bicep IaC (pick one — record the choice as an ADR) for
   Container Apps, Azure SQL, Redis, Service Bus, SignalR, Entra External
-  ID.
+  ID, and the MongoDB instance backing `Lakbay.SearchApi` (Azure Cosmos DB
+  for MongoDB, or a managed MongoDB Atlas instance — an open choice to
+  resolve in this phase, not decided yet).
 - Real destination/product content replacing every placeholder from
-  earlier phases.
+  earlier phases, authored in `Lakbay.Cms` and confirmed synced into
+  `Lakbay.SearchApi`.
 - DNS cutover, Application Insights wired, security/QA pass (headers,
   Lighthouse, cross-browser — same discipline as Ophir Mineral Ventures'
   Phase 7).
@@ -199,8 +251,8 @@ Apps; `Lakbay.MockApi` stays dev/demo-only, not deployed to production.
   whoever operates the CMS day to day) finalized in `Lakbay.Cms`.
 
 **Exit criteria:** the live site is reachable on its real domain, serves
-real PH holiday content, and a real booking can be completed with a real
-(not sandbox) payment method.
+real PH holiday content via `Lakbay.SearchApi`, and a real booking can be
+completed with a real (not sandbox) payment method.
 
 ## Phase 6 — Scale readiness
 
@@ -213,7 +265,11 @@ technology-stack table against real traffic data, not assumption.
   has genuinely stopped being cheaper than reserved AKS nodes.
 - Stripe/Xendit: only add if international-card volume or SEA expansion
   justifies a second payment gateway.
-- Azure AI Search: only if catalog facet complexity has outgrown Examine.
+- `Lakbay.SearchApi`'s MongoDB → a managed search-specific engine (Azure
+  AI Search, or MongoDB Atlas Search): only if facet/query complexity
+  outgrows what MongoDB's own indexing handles well — the same kind of
+  scale question Hotelplan answered by moving to Manticore, worth revisiting
+  with real query-pattern data rather than assumed on day one.
 - Formal ETL (Azure Data Factory): only once real BI/reporting volume
   exists.
 

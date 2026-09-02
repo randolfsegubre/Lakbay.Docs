@@ -6,6 +6,91 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-06 (2) — Real-time availability propagation designed (ADR-0008)
+
+**Asked:** "I want real time data changes reflected in the UI... an
+accommodation that were sold out same day will not show in the listings
+anymore... I don't think that feature is not in Inghams or HotelPlan...
+I don't know yet how to do that." — raised immediately after the
+`Lakbay.SearchApi` rename work, in the same session.
+
+**What changed:** Designed and documented
+[ADR-0008](adr/ADR-0008-realtime-availability-propagation.md): when
+`Lakbay.Booking` confirms a booking, it publishes `AvailabilityChanged`
+over Service Bus; `Lakbay.SearchApi` (already the Service Bus consumer
+for `Lakbay.Cms` sync, per ADR-0007) also consumes this, updates its read
+model, and pushes a change notification over Azure SignalR Service (a
+service already in the stack, originally scoped for exactly this);
+`Lakbay.Web` holds a live SignalR connection per listing page and
+invalidates just the affected item's RTK Query cache entry — no polling,
+no full reload. Explicitly separated this from overselling prevention,
+which is a concurrency-control problem inside `Lakbay.Booking`'s own
+confirm-handler, unaffected by how fast the UI elsewhere updates — flagged
+so it isn't mistaken for solved by this ADR. Updated
+`06_SYSTEM_ARCHITECTURE.md` (new section, updated diagram, updated
+`Lakbay.SearchApi`/`Lakbay.Booking`/`Lakbay.Web` rows), `02_BUILD_PLAN.md`
+Phase 4, `01_CLAUDE.md`'s decision list, and the three affected repos'
+`CLAUDE.md` files.
+
+**What's next:** unchanged — rest of Phase 0 scaffolding. Phase 4 now
+carries explicit real-time-propagation and concurrency-control scope that
+wasn't spelled out before.
+
+---
+
+## 2026-09-06 — MockApi was never a mock: renamed to SearchApi, real role, full architecture doc written
+
+**Asked:** Two things. (1) "I assume MockApi is our version of Sphinx-Api,
+right? But do we call it MockApi? Aren't we going to use it as our API
+application for real just like Sphinx-Api?" (2) A request for the
+per-repo and whole-platform architecture to be written into the docs,
+since this is a multi-application integration system.
+
+**What changed:** Checked [[technical_playbook]] before answering rather
+than trusting memory of it — `api-sphinx` at Hotelplan is real,
+production code (55 commits, "the highest-risk-per-change repo," direct
+Manticore search-engine query logic backing real price/availability/
+product filtering, called by multiple consumer apps). The original
+"disposable mock" framing for this repo was wrong from the start; it
+followed Randolf's own casual first-message wording too literally instead
+of checking what the real precedent actually was.
+
+Corrected via [ADR-0007](adr/ADR-0007-searchapi-is-real-not-mock.md):
+
+- `Lakbay.MockApi` renamed to **`Lakbay.SearchApi`** (folder renamed on
+  disk, git history preserved — verified via `git log` after the move).
+  Real, permanently deployed — not retired at any phase.
+- It's a denormalized, facet-indexed read model of the catalog, synced
+  **from** `Lakbay.Cms` (the authoring source of truth), queried by
+  `Lakbay.Web` in production — the same role Manticore played at
+  Hotelplan, MongoDB in its place.
+- Recognized this as the same CQRS-at-the-repo-level pattern
+  (ADR-0002/ADR-0003) applied one level up, at the whole-platform scale:
+  `Lakbay.Cms` write side, `Lakbay.SearchApi` read side.
+- Rewrote `02_BUILD_PLAN.md`'s Phase 1/3/5: Phase 3 is no longer "repoint
+  `Lakbay.Web` from mock to real backend" — `Lakbay.Web` never stops
+  talking to `Lakbay.SearchApi`; what changes at Phase 3 is that
+  `Lakbay.SearchApi`'s data source switches from hand-seeded to synced
+  from `Lakbay.Cms`, with zero `Lakbay.Web` code changes. This is a
+  cleaner proof of the shared-contract story than the original framing,
+  not just a correction.
+- Wrote [06_SYSTEM_ARCHITECTURE.md](06_SYSTEM_ARCHITECTURE.md): per-repo
+  architecture (ownership, internal shape, integration points) for all
+  six repos, plus the whole-platform integration diagram and the "why
+  this shape, not a monolith" synthesis across ADR-0001/0003/0006/0007.
+- Propagated the rename everywhere it was stated:
+  `01_CLAUDE.md`, `03_ARCHITECTURE_AND_PATTERNS_GUIDE.md`, `04_TASKS.md`,
+  `Lakbay.SearchApi/CLAUDE.md`+`README.md`, `Lakbay.Web/CLAUDE.md`+`README.md`,
+  `Lakbay.Contracts/CLAUDE.md`+`README.md`, `Lakbay.Docs/CLAUDE.md`, the
+  root `README.md`, the Lakbay Blueprint artifact, and the Lakbay System
+  Map diagram.
+
+**What's next:** unchanged — rest of Phase 0 scaffolding, now including
+deciding the `Lakbay.Cms` → `Lakbay.SearchApi` sync trigger mechanism
+(flagged as new, real scope by ADR-0007, not assumed solved).
+
+---
+
 ## 2026-09-05 (2) — Formalized the headless-CMS decision as ADR-0006
 
 **Asked:** Randolf questioned whether Next.js/TypeScript meant Lakbay was

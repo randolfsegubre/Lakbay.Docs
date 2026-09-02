@@ -24,7 +24,7 @@ cover-to-cover up front.
 
 **This repo has no application code.** If you were pointed here while
 working inside `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.Web`,
-`Lakbay.MockApi`, or `Lakbay.Contracts`, that repo's own `CLAUDE.md` is
+`Lakbay.SearchApi`, or `Lakbay.Contracts`, that repo's own `CLAUDE.md` is
 the one that should have loaded automatically — come back here only for
 the platform-wide "why."
 

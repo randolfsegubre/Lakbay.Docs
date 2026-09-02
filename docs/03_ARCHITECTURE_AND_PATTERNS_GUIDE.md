@@ -78,10 +78,23 @@ See [docs/adr/](adr/) — currently:
   in Docker for local dev; Azure SQL Database only in the live environment
 - [ADR-0006](adr/ADR-0006-headless-cms-no-razor-ui.md) — `Lakbay.Cms` is
   headless (zero Razor/UI code); `Lakbay.Web` owns all presentation
+- [ADR-0007](adr/ADR-0007-searchapi-is-real-not-mock.md) — `Lakbay.SearchApi`
+  is a real, permanent search read-model synced from `Lakbay.Cms`, not a
+  disposable mock
+- [ADR-0008](adr/ADR-0008-realtime-availability-propagation.md) —
+  real-time availability propagation: Service Bus → `Lakbay.SearchApi` →
+  Azure SignalR Service, no polling
 
-Note on the tables above: since ADR-0004, `Lakbay.MockApi` is .NET like
-`Lakbay.Cms` and `Lakbay.Booking`, so the same Repository-pattern and
-Dependency-Inversion rows apply there too, not just to the two production
-repos — worth reusing the same `IProductCatalogRepository`-shaped
-abstraction rather than inventing a parallel one, if/when that
-duplication is noticed during Phase 1.
+Note on the tables above: since ADR-0004, `Lakbay.SearchApi` (renamed from
+`Lakbay.MockApi`, see ADR-0007) is .NET like `Lakbay.Cms` and
+`Lakbay.Booking`, so the same Repository-pattern and Dependency-Inversion
+rows apply there too, not just to `Lakbay.Cms`/`Lakbay.Booking` — worth
+reusing the same `IProductCatalogRepository`-shaped abstraction rather
+than inventing a parallel one. `Lakbay.SearchApi`'s own defining pattern
+is the **system-level CQRS split** it forms with `Lakbay.Cms`:
+`Lakbay.Cms` is the write/authoring side for content and catalog data,
+`Lakbay.SearchApi` is a dedicated, denormalized read side optimized for
+faceted search — the same read/write separation `Lakbay.Booking` applies
+internally via MediatR (ADR-0002), one level up, at the whole-system
+scale. See [06_SYSTEM_ARCHITECTURE.md](06_SYSTEM_ARCHITECTURE.md) for the
+full picture.
