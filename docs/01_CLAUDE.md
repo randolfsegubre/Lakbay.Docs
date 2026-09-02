@@ -47,7 +47,7 @@ final branding/trademark is a marketing decision, not a technical one):
 | `Lakbay.Cms` | Unified editorial CMS + product catalog — ECMS and PCMS merged into one Umbraco solution | Umbraco 17, .NET |
 | `Lakbay.Booking` | Orders, basket, availability calendar, payment orchestration — deliberately separate from the CMS | .NET minimal API |
 | `Lakbay.Web` | Public storefront: marketing pages, catalog browsing, booking flow | Next.js, Redux Toolkit + RTK Query |
-| `Lakbay.SearchApi` | Real, permanently deployed product-search service — denormalized read model synced from `Lakbay.Cms`, modeled on Hotelplan's `api-sphinx`/Manticore. **Not a mock** (renamed from `Lakbay.MockApi`) | ASP.NET Core, HotChocolate, MongoDB.Driver |
+| `Lakbay.AvailabilityApi` | Real, permanently deployed product-search service — denormalized read model synced from `Lakbay.Cms`, modeled on Hotelplan's `api-sphinx`/Manticore. **Not a mock** (renamed from `Lakbay.MockApi`) | ASP.NET Core, HotChocolate, MongoDB.Driver |
 | `Lakbay.Contracts` | Shared GraphQL SDL schema + generated TS/C# types, versioned as a package | Schema + codegen |
 
 ## 3. The load-bearing architecture decisions
@@ -71,11 +71,11 @@ governs.
    a single fat service class is the exact shape that left
    `E-Commerse.AI.API`'s controllers as untestable, disconnected stubs.
    See [ADR-0002](adr/ADR-0002-cqrs-booking.md).
-4. **`Lakbay.SearchApi` is .NET (HotChocolate + MongoDB.Driver), not
+4. **`Lakbay.AvailabilityApi` is .NET (HotChocolate + MongoDB.Driver), not
    Node.js/Apollo** — the only place the original plan introduced a second
    backend language without a real requirement behind it. One backend
    language across `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.Contracts`, and
-   `Lakbay.SearchApi`; only `Lakbay.Web` is genuinely a different stack.
+   `Lakbay.AvailabilityApi`; only `Lakbay.Web` is genuinely a different stack.
    See [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md).
 5. **Local development runs SQL Server in Docker, not Azure SQL Database**
    — Azure SQL Database is cloud-only PaaS with no local edition; it's
@@ -90,7 +90,7 @@ governs.
    opposite of the ECMS/Prototype hybrid (Razor page shells in the CMS
    with React embedded inside them). See
    [ADR-0006](adr/ADR-0006-headless-cms-no-razor-ui.md).
-7. **`Lakbay.SearchApi` is real, permanently deployed infrastructure, not
+7. **`Lakbay.AvailabilityApi` is real, permanently deployed infrastructure, not
    a disposable mock** — checking the actual Hotelplan `api-sphinx`
    commit history (55 commits, described as the highest-risk-per-change
    repo doing real price/availability search) showed the "just a mock"
@@ -102,13 +102,33 @@ governs.
    [06_SYSTEM_ARCHITECTURE.md](06_SYSTEM_ARCHITECTURE.md) for exactly how
    this fits alongside `Lakbay.Cms` and `Lakbay.Booking`.
 8. **Availability changes propagate live, no polling** — a confirmed
-   booking in `Lakbay.Booking` reaches `Lakbay.SearchApi` via Service Bus,
+   booking in `Lakbay.Booking` reaches `Lakbay.AvailabilityApi` via Service Bus,
    which updates its read model and pushes a change notification over
    Azure SignalR Service to any `Lakbay.Web` page currently showing that
    listing. Deliberately not the same thing as preventing overselling
    (that's concurrency control inside `Lakbay.Booking`, unaffected by this
    decision). See
    [ADR-0008](adr/ADR-0008-realtime-availability-propagation.md).
+9. **`Lakbay.AvailabilityApi` splits query-serving from event-consumption**
+   — a separate Azure Function (`Lakbay.AvailabilityApi.Sync`,
+   `[ServiceBusTrigger]`) handles Cms-sync and `AvailabilityChanged`
+   events, so the GraphQL query API is never slowed by write/sync load.
+   The sync function only applies an update if it's newer than what's
+   stored (last-write-wins, guarding against Service Bus's lack of strict
+   ordering). See [ADR-0009](adr/ADR-0009-availabilityapi-rename-and-split.md)
+   and [ADR-0010](adr/ADR-0010-last-write-wins-sync.md).
+10. **Double-booking is prevented at the database, not by anything above**
+    — `Lakbay.Booking`'s confirm-booking handler uses a single atomic,
+    conditional SQL `UPDATE` (never read-then-write) so two
+    near-simultaneous bookings for the same slot can't both succeed. This
+    is entirely independent of items 8 and 9 above — real-time propagation
+    makes the UI accurate, this makes the booking correct. See
+    [ADR-0011](adr/ADR-0011-atomic-availability-decrement.md).
+11. **Umbraco content blocks render via a React block-registry** —
+    `Lakbay.Cms`'s Block List/Grid JSON maps element-type alias to a
+    `Lakbay.Web` React component, the standard headless-CMS
+    component-mapping pattern. See
+    [ADR-0012](adr/ADR-0012-block-rendering-in-react.md).
 
 ## 4. Engineering practice — non-negotiable, not aspirational
 
@@ -164,7 +184,7 @@ own `CLAUDE.md`.
   deliberately left open.
 - Regulatory: Philippine DOT accreditation requirements for listed
   operators — legal check, can gate launch, not an engineering task.
-- Exact sync trigger from `Lakbay.Cms` to `Lakbay.SearchApi` (Umbraco
+- Exact sync trigger from `Lakbay.Cms` to `Lakbay.AvailabilityApi` (Umbraco
   content-cache-refresher event, Service Bus message, or scheduled
   Hangfire job) — flagged as genuine new scope by ADR-0007, not yet
   decided. Needs deciding before Phase 1 is considered done.

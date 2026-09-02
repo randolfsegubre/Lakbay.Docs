@@ -6,6 +6,64 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-06 (3) — AvailabilityApi rename + split, ordering guard, real double-booking fix, block rendering
+
+**Asked:** Four things in one message. (1) Decouple event consumption
+from query serving, "like hooks" — worried the search API would slow down
+carrying that extra load. (2) Cache/read-model updates should respect
+"record from db is newer than the cache." (3) The actual goal behind all
+of this: two near-simultaneous bookings for the same slot must not both
+succeed. (4) "Lakbay.SearchApi" is too generic — rename it. Plus a
+separate question: how do Umbraco's Block List/Grid components reach the
+page without Razor — can React handle that?
+
+**What changed:**
+
+- [ADR-0009](adr/ADR-0009-availabilityapi-rename-and-split.md):
+  `Lakbay.SearchApi` renamed to **`Lakbay.AvailabilityApi`** (folder
+  renamed on disk via robocopy after a direct `mv`/`Move-Item` failed on
+  Windows `.git` permissions both times — git history verified intact
+  both times before deleting the old folder) and split into two
+  deployables sharing one repo: the GraphQL query API (pure read,
+  untouched by events) and `Lakbay.AvailabilityApi.Sync`, an Azure
+  Function with a `[ServiceBusTrigger]` — the direct .NET equivalent of a
+  webhook, confirmed against current Microsoft docs before writing it up.
+- [ADR-0010](adr/ADR-0010-last-write-wins-sync.md): the sync function only
+  applies an incoming update if its source timestamp is newer than what's
+  stored, guarding against Service Bus's lack of strict ordering
+  guarantees — exactly the mechanism Randolf described.
+- [ADR-0011](adr/ADR-0011-atomic-availability-decrement.md): the actual
+  double-booking fix, and the one most important to get right — an
+  atomic, conditional `UPDATE ... WHERE AvailableCount > 0` inside
+  `Lakbay.Booking`'s confirm-booking handler, relying on SQL Server's row
+  locking rather than any read-then-write application logic. Written up
+  explicitly as independent of ADR-0008/0009/0010 — no amount of fast
+  propagation to the read side prevents this race, only a correct atomic
+  write on the booking side does.
+- [ADR-0012](adr/ADR-0012-block-rendering-in-react.md): confirmed (web
+  search against current Umbraco/headless-CMS practice) that a React
+  block-registry — mapping each Umbraco element-type alias to a
+  component, walking the Content Delivery API's block JSON — is the
+  standard pattern here, the same idea Sanity/Contentful/Storyblok use
+  under different names. Not a gap Lakbay needs to solve novel.
+- Propagated the `SearchApi` → `AvailabilityApi` rename across every
+  living doc (`01_CLAUDE.md`, `02_BUILD_PLAN.md`,
+  `03_ARCHITECTURE_AND_PATTERNS_GUIDE.md`, `06_SYSTEM_ARCHITECTURE.md`,
+  root `README.md`, `Lakbay.Docs/CLAUDE.md`, and the five application
+  repos' own `CLAUDE.md`/`README.md`) — via targeted `sed` on files that
+  are pure current-state, by hand on `04_TASKS.md`/this file where past
+  entries needed to keep their historical wording intact. ADR-0004,
+  0007, and 0008 keep `SearchApi`/`MockApi` in their original text
+  deliberately — they are point-in-time records of decisions made under
+  those names, not rewritten.
+
+**What's next:** unchanged — rest of Phase 0 scaffolding, now including
+the `Lakbay.AvailabilityApi.Sync` Function project and a concurrency test
+proving ADR-0011's fix actually works under simulated simultaneous
+requests.
+
+---
+
 ## 2026-09-06 (2) — Real-time availability propagation designed (ADR-0008)
 
 **Asked:** "I want real time data changes reflected in the UI... an

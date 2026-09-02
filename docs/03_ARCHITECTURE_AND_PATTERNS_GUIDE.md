@@ -78,22 +78,43 @@ See [docs/adr/](adr/) — currently:
   in Docker for local dev; Azure SQL Database only in the live environment
 - [ADR-0006](adr/ADR-0006-headless-cms-no-razor-ui.md) — `Lakbay.Cms` is
   headless (zero Razor/UI code); `Lakbay.Web` owns all presentation
-- [ADR-0007](adr/ADR-0007-searchapi-is-real-not-mock.md) — `Lakbay.SearchApi`
+- [ADR-0007](adr/ADR-0007-searchapi-is-real-not-mock.md) — `Lakbay.AvailabilityApi`
   is a real, permanent search read-model synced from `Lakbay.Cms`, not a
   disposable mock
 - [ADR-0008](adr/ADR-0008-realtime-availability-propagation.md) —
-  real-time availability propagation: Service Bus → `Lakbay.SearchApi` →
+  real-time availability propagation: Service Bus → `Lakbay.AvailabilityApi` →
   Azure SignalR Service, no polling
+- [ADR-0009](adr/ADR-0009-availabilityapi-rename-and-split.md) — renamed
+  to `Lakbay.AvailabilityApi`; split into a query-serving API and a
+  separate Service-Bus-triggered Azure Function for event consumption
+- [ADR-0010](adr/ADR-0010-last-write-wins-sync.md) — last-write-wins
+  ordering guard on synced data, using a source-generated timestamp
+- [ADR-0011](adr/ADR-0011-atomic-availability-decrement.md) — the actual
+  double-booking fix: an atomic, conditional SQL update in
+  `Lakbay.Booking`, independent of the propagation ADRs above
+- [ADR-0012](adr/ADR-0012-block-rendering-in-react.md) — Umbraco content
+  blocks render through a React block-registry, not Razor
 
-Note on the tables above: since ADR-0004, `Lakbay.SearchApi` (renamed from
+## A pattern this repo hasn't named yet: the atomic guard clause
+
+ADR-0011's `UPDATE ... WHERE AvailableCount > 0` is worth calling out as
+its own small pattern, distinct from the OOP/SOLID/GoF vocabulary above:
+an **atomic guard clause** — a single database statement that combines
+the invariant check ("is this still available") and the state change
+("reserve it") so no other transaction can observe or act on the
+in-between state. Reach for this whenever a "check then act" sequence
+against shared, concurrently-written state is tempting — the check and
+the act belong in one atomic operation, not two.
+
+Note on the tables above: since ADR-0004, `Lakbay.AvailabilityApi` (renamed from
 `Lakbay.MockApi`, see ADR-0007) is .NET like `Lakbay.Cms` and
 `Lakbay.Booking`, so the same Repository-pattern and Dependency-Inversion
 rows apply there too, not just to `Lakbay.Cms`/`Lakbay.Booking` — worth
 reusing the same `IProductCatalogRepository`-shaped abstraction rather
-than inventing a parallel one. `Lakbay.SearchApi`'s own defining pattern
+than inventing a parallel one. `Lakbay.AvailabilityApi`'s own defining pattern
 is the **system-level CQRS split** it forms with `Lakbay.Cms`:
 `Lakbay.Cms` is the write/authoring side for content and catalog data,
-`Lakbay.SearchApi` is a dedicated, denormalized read side optimized for
+`Lakbay.AvailabilityApi` is a dedicated, denormalized read side optimized for
 faceted search — the same read/write separation `Lakbay.Booking` applies
 internally via MediatR (ADR-0002), one level up, at the whole-system
 scale. See [06_SYSTEM_ARCHITECTURE.md](06_SYSTEM_ARCHITECTURE.md) for the

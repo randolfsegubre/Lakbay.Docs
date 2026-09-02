@@ -32,12 +32,29 @@
       Phase 4 rewritten to include it, explicitly separated from the
       overselling/concurrency-control concern it does not solve —
       2026-09-06
+- [x] `Lakbay.SearchApi` renamed to `Lakbay.AvailabilityApi` and split
+      into a pure query-serving GraphQL service plus a separate
+      Service-Bus-triggered Azure Function (`Lakbay.AvailabilityApi.Sync`)
+      for event consumption — decouples sync/write load from query
+      performance (ADR-0009) — 2026-09-06
+- [x] Last-write-wins ordering guard designed for the sync function, using
+      a source-generated timestamp so out-of-order Service Bus delivery
+      can't overwrite newer data with stale data (ADR-0010) — 2026-09-06
+- [x] Double-booking prevention designed: an atomic, conditional SQL
+      `UPDATE` in `Lakbay.Booking`'s confirm-booking handler, not a
+      read-then-write check — the actual fix for two near-simultaneous
+      bookings racing for the same slot, explicitly independent of the
+      real-time propagation work above (ADR-0011) — 2026-09-06
+- [x] Block-rendering pattern designed: Umbraco Block List/Grid JSON →
+      a React block-registry in `Lakbay.Web` mapping element-type alias to
+      component, matching the standard headless-CMS component-mapping
+      pattern (ADR-0012) — 2026-09-06
 
 ## Not done — rest of Phase 0
 
 - [ ] Confirm exact local toolchain versions (.NET SDK for Umbraco 17/
-      Booking/SearchApi, Node.js for Lakbay.Web only, Docker Desktop) on
-      this machine
+      Booking/AvailabilityApi, Node.js for Lakbay.Web only, Docker Desktop)
+      on this machine
 - [ ] `Lakbay.Contracts` schema v0 (Product, ProductLine, Destination
       types) written and committed
 - [ ] `Lakbay.Cms` — empty Umbraco 17 solution scaffolded, boots to
@@ -45,15 +62,19 @@
 - [ ] `Lakbay.Booking` — empty .NET minimal API + xUnit test project
       scaffolded
 - [ ] `Lakbay.Web` — empty Next.js + Redux Toolkit project scaffolded
-- [ ] `Lakbay.SearchApi` — empty ASP.NET Core + HotChocolate project
-      scaffolded, MongoDB via Docker Compose
-- [ ] Decide the Cms → SearchApi sync trigger mechanism (Umbraco event,
-      Service Bus message, or scheduled job) — flagged by ADR-0007
+- [ ] `Lakbay.AvailabilityApi` — empty ASP.NET Core + HotChocolate query
+      project, plus the `Lakbay.AvailabilityApi.Sync` Azure Function
+      project (ADR-0009), scaffolded; MongoDB via Docker Compose
+- [ ] Decide the Cms → AvailabilityApi sync trigger mechanism (Umbraco
+      event, Service Bus message, or scheduled job) — flagged by ADR-0007
 - [ ] SQL Server (Docker, Developer Edition) Compose service defined for
       `Lakbay.Cms` and `Lakbay.Booking`, per ADR-0005
 - [ ] CI skeleton in every repo
 - [ ] `Docs/DEVELOPER_HANDBOOK.md` stub in each of the five application
       repos, with real (proven, not assumed) local setup steps
+- [ ] A concurrency test in `Lakbay.Booking` proving the atomic decrement
+      actually prevents double-booking under simulated simultaneous
+      requests — ADR-0011, not just a sequential-call test
 - [ ] Decide: GitHub remotes for these repos, or stay local-only for now —
       open item, needs an explicit answer, not an assumption
 
@@ -63,5 +84,5 @@
   §6) — blocks locking `Lakbay.Contracts` schema v0 as final.
 - Package registry choice (GitHub Packages vs. Azure Artifacts) for
   publishing `Lakbay.Contracts`.
-- Production MongoDB hosting for `Lakbay.SearchApi` (Azure Cosmos DB for
-  MongoDB vs. MongoDB Atlas) — a Phase 5 decision, not urgent now.
+- Production MongoDB hosting for `Lakbay.AvailabilityApi` (Azure Cosmos DB
+  for MongoDB vs. MongoDB Atlas) — a Phase 5 decision, not urgent now.
