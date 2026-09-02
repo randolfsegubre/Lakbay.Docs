@@ -6,6 +6,27 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-05 (2) — Formalized the headless-CMS decision as ADR-0006
+
+**Asked:** Randolf questioned whether Next.js/TypeScript meant Lakbay was
+quietly heading back toward the ECMS/Prototype hybrid (Razor page shells
+in the CMS with React embedded inside them) — Next.js being a React
+framework, and TypeScript sounding like it could layer the same way.
+
+**What changed:** Confirmed it's the opposite, and — since this decision
+had only ever been stated in prose (the Blueprint and `Lakbay.Web/CLAUDE.md`)
+— wrote it up properly as
+[ADR-0006](adr/ADR-0006-headless-cms-no-razor-ui.md): `Lakbay.Cms` never
+renders a page or holds Razor/UI code for the public site; `Lakbay.Web`
+owns 100% of presentation. Updated `01_CLAUDE.md`'s decision list,
+`Lakbay.Web/CLAUDE.md`, and `Lakbay.Cms/CLAUDE.md` to point at the ADR
+instead of leaving it as a "no formal ADR yet" placeholder — closing a gap
+I'd flagged myself but not yet acted on.
+
+**What's next:** unchanged — rest of Phase 0 scaffolding.
+
+---
+
 ## 2026-09-05 — MockApi stack changed to .NET; local DB story clarified
 
 **Asked:** Two questions. (1) Can `Lakbay.MockApi` be .NET instead of

@@ -76,6 +76,8 @@ See [docs/adr/](adr/) — currently:
   is .NET (HotChocolate), not Node.js/Apollo
 - [ADR-0005](adr/ADR-0005-local-sql-server-not-azure-sql.md) — SQL Server
   in Docker for local dev; Azure SQL Database only in the live environment
+- [ADR-0006](adr/ADR-0006-headless-cms-no-razor-ui.md) — `Lakbay.Cms` is
+  headless (zero Razor/UI code); `Lakbay.Web` owns all presentation
 
 Note on the tables above: since ADR-0004, `Lakbay.MockApi` is .NET like
 `Lakbay.Cms` and `Lakbay.Booking`, so the same Repository-pattern and

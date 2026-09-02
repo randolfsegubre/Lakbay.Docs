@@ -81,12 +81,15 @@ governs.
    — Azure SQL Database is cloud-only PaaS with no local edition; it's
    used only once a live/staging environment exists (Phase 5). See
    [ADR-0005](adr/ADR-0005-local-sql-server-not-azure-sql.md).
-6. **The frontend is fully headless, not Razor-hosted** — `Lakbay.Web` is
-   a standalone Next.js app talking to GraphQL only. Next.js (SSR/ISR) for
-   SEO-critical pages, RTK Query for server-state/caching, plain Redux
-   Toolkit slices only for genuinely client-side state (booking wizard,
-   basket). Full reasoning in the Blueprint's "Frontend: React, Redux, and
-   why not Razor-hosted" section.
+6. **The frontend is fully headless, not Razor-hosted** — `Lakbay.Cms`
+   never renders a page or holds UI code; `Lakbay.Web` is a standalone
+   Next.js app owning 100% of presentation, talking to GraphQL only.
+   Next.js (SSR/ISR) for SEO-critical pages, RTK Query for
+   server-state/caching, plain Redux Toolkit slices only for genuinely
+   client-side state (booking wizard, basket). This is the direct
+   opposite of the ECMS/Prototype hybrid (Razor page shells in the CMS
+   with React embedded inside them). See
+   [ADR-0006](adr/ADR-0006-headless-cms-no-razor-ui.md).
 
 ## 4. Engineering practice — non-negotiable, not aspirational
 
