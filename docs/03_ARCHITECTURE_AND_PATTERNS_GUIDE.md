@@ -72,3 +72,14 @@ See [docs/adr/](adr/) — currently:
   booking service class
 - [ADR-0003](adr/ADR-0003-separate-booking-data.md) — Keep transactional
   booking data out of the Umbraco database
+- [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md) — `Lakbay.MockApi`
+  is .NET (HotChocolate), not Node.js/Apollo
+- [ADR-0005](adr/ADR-0005-local-sql-server-not-azure-sql.md) — SQL Server
+  in Docker for local dev; Azure SQL Database only in the live environment
+
+Note on the tables above: since ADR-0004, `Lakbay.MockApi` is .NET like
+`Lakbay.Cms` and `Lakbay.Booking`, so the same Repository-pattern and
+Dependency-Inversion rows apply there too, not just to the two production
+repos — worth reusing the same `IProductCatalogRepository`-shaped
+abstraction rather than inventing a parallel one, if/when that
+duplication is noticed during Phase 1.

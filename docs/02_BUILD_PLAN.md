@@ -52,9 +52,12 @@ shared contract exists before any repo starts consuming it.
       (done 2026-09-03).
 - [ ] Confirm local environment: `.NET` SDK version for Umbraco 17 (verify
       the exact minimum at scaffold time — Umbraco version support moves
-      faster than this doc), Node.js version for Next.js/Apollo, Docker
-      Desktop (for the offline-runnable Compose stacks each repo will
-      need).
+      faster than this doc; this same SDK now also covers `Lakbay.Booking`
+      and `Lakbay.MockApi`, per [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md)),
+      Node.js version for `Lakbay.Web` only, and Docker Desktop (for the
+      offline-runnable Compose stacks each repo will need — SQL Server for
+      Cms/Booking per [ADR-0005](adr/ADR-0005-local-sql-server-not-azure-sql.md),
+      MongoDB for MockApi).
 - [ ] `Lakbay.Contracts`: schema v0 — `Product`, `ProductLine`,
       `Destination` GraphQL types, matching the four product lines and the
       cluster/destination table in the Blueprint's market-research
@@ -68,9 +71,9 @@ shared contract exists before any repo starts consuming it.
       project scaffolded alongside it from the start (not deferred).
 - [ ] `Lakbay.Web`: empty Next.js (App Router) + Redux Toolkit project,
       `create-next-app` baseline committed before any real pages.
-- [ ] `Lakbay.MockApi`: empty Node.js + Apollo Server project, MongoDB via
-      Docker Compose, boots and serves an introspection query with zero
-      resolvers.
+- [ ] `Lakbay.MockApi`: empty ASP.NET Core + HotChocolate project, MongoDB
+      via Docker Compose, boots and serves an introspection query with
+      zero resolvers.
 - [ ] CI skeleton in every repo (GitHub Actions or equivalent) — even if
       it only runs `dotnet build`/`npm ci && npm run build` at this stage.
       Real test gates arrive with each phase's own work.
@@ -102,7 +105,9 @@ market research (not placeholder lorem).
   `Lakbay.Contracts`' published SDL — this is the guardrail from ADR
   discussions that keeps the mock and the eventual real backend from
   silently drifting apart.
-- Jest + Apollo Server testing utilities per the Blueprint's TDD section.
+- xUnit + HotChocolate's testing utilities (`IRequestExecutor` test
+  helpers), same test stack shape as `Lakbay.Cms`/`Lakbay.Booking` now
+  that this repo is .NET too (ADR-0004).
 
 **Exit criteria:** a GraphQL Playground/introspection query against a
 locally-run `Lakbay.MockApi` returns real seeded product-line and

@@ -15,6 +15,10 @@
       `03_ARCHITECTURE_AND_PATTERNS_GUIDE.md`, ADR-0001–0003 — 2026-09-03
 - [x] Each of the five application repos given a thin `CLAUDE.md`, README,
       and stack-appropriate `.gitignore` — 2026-09-03
+- [x] `Lakbay.MockApi` switched from Node.js/Apollo to .NET/HotChocolate/
+      MongoDB.Driver (ADR-0004); local-dev database story clarified — SQL
+      Server in Docker, Azure SQL Database only once live (ADR-0005) —
+      2026-09-05
 
 ## Not done — rest of Phase 0
 
@@ -27,8 +31,10 @@
 - [ ] `Lakbay.Booking` — empty .NET minimal API + xUnit test project
       scaffolded
 - [ ] `Lakbay.Web` — empty Next.js + Redux Toolkit project scaffolded
-- [ ] `Lakbay.MockApi` — empty Node.js + Apollo Server project scaffolded,
-      MongoDB via Docker Compose
+- [ ] `Lakbay.MockApi` — empty ASP.NET Core + HotChocolate project
+      scaffolded, MongoDB via Docker Compose
+- [ ] SQL Server (Docker, Developer Edition) Compose service defined for
+      `Lakbay.Cms` and `Lakbay.Booking`, per ADR-0005
 - [ ] CI skeleton in every repo
 - [ ] `Docs/DEVELOPER_HANDBOOK.md` stub in each of the five application
       repos, with real (proven, not assumed) local setup steps

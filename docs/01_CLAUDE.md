@@ -47,7 +47,7 @@ final branding/trademark is a marketing decision, not a technical one):
 | `Lakbay.Cms` | Unified editorial CMS + product catalog — ECMS and PCMS merged into one Umbraco solution | Umbraco 17, .NET |
 | `Lakbay.Booking` | Orders, basket, availability calendar, payment orchestration — deliberately separate from the CMS | .NET minimal API |
 | `Lakbay.Web` | Public storefront: marketing pages, catalog browsing, booking flow | Next.js, Redux Toolkit + RTK Query |
-| `Lakbay.MockApi` | Disposable GraphQL/MongoDB backend mirroring `Lakbay.Contracts` — lets `Lakbay.Web` be built and tested before `Lakbay.Cms`/`Lakbay.Booking` exist | Node.js, Apollo Server, MongoDB |
+| `Lakbay.MockApi` | Disposable GraphQL/MongoDB backend mirroring `Lakbay.Contracts` — lets `Lakbay.Web` be built and tested before `Lakbay.Cms`/`Lakbay.Booking` exist | ASP.NET Core, HotChocolate, MongoDB.Driver |
 | `Lakbay.Contracts` | Shared GraphQL SDL schema + generated TS/C# types, versioned as a package | Schema + codegen |
 
 ## 3. The four load-bearing architecture decisions
@@ -71,7 +71,17 @@ governs.
    a single fat service class is the exact shape that left
    `E-Commerse.AI.API`'s controllers as untestable, disconnected stubs.
    See [ADR-0002](adr/ADR-0002-cqrs-booking.md).
-4. **The frontend is fully headless, not Razor-hosted** — `Lakbay.Web` is
+4. **`Lakbay.MockApi` is .NET (HotChocolate + MongoDB.Driver), not
+   Node.js/Apollo** — the only place the original plan introduced a second
+   backend language without a real requirement behind it. One backend
+   language across `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.Contracts`, and
+   `Lakbay.MockApi`; only `Lakbay.Web` is genuinely a different stack. See
+   [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md).
+5. **Local development runs SQL Server in Docker, not Azure SQL Database**
+   — Azure SQL Database is cloud-only PaaS with no local edition; it's
+   used only once a live/staging environment exists (Phase 5). See
+   [ADR-0005](adr/ADR-0005-local-sql-server-not-azure-sql.md).
+6. **The frontend is fully headless, not Razor-hosted** — `Lakbay.Web` is
    a standalone Next.js app talking to GraphQL only. Next.js (SSR/ISR) for
    SEO-critical pages, RTK Query for server-state/caching, plain Redux
    Toolkit slices only for genuinely client-side state (booking wizard,

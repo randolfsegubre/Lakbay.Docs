@@ -6,6 +6,42 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-05 — MockApi stack changed to .NET; local DB story clarified
+
+**Asked:** Two questions. (1) Can `Lakbay.MockApi` be .NET instead of
+Node.js, so it uses MongoDB from .NET rather than Node? (2) Since
+everything is being built local-only for now, can Azure SQL Database run
+locally for free, or should local dev use SQL Server and only switch to
+Azure SQL Database once live?
+
+**What changed:**
+
+- [ADR-0004](adr/ADR-0004-mockapi-dotnet-not-node.md): `Lakbay.MockApi`
+  moves from Node.js + Apollo Server to ASP.NET Core + HotChocolate +
+  MongoDB.Driver. This was the one repo in the whole plan using a second
+  backend language without a real requirement behind it — now `Lakbay.Cms`,
+  `Lakbay.Booking`, `Lakbay.Contracts`, and `Lakbay.MockApi` are all .NET;
+  only `Lakbay.Web` is genuinely a different stack.
+- [ADR-0005](adr/ADR-0005-local-sql-server-not-azure-sql.md): confirmed
+  Azure SQL Database has no local/offline edition — it's cloud-only PaaS,
+  even though it does have a real, no-cost-forever free tier (100,000
+  vCore-seconds + 32GB/month) that just doesn't help with fully-offline
+  local dev. Local dev for `Lakbay.Cms`/`Lakbay.Booking` runs SQL Server
+  Developer Edition in Docker instead; Azure SQL Database is used only
+  once a live/staging environment exists (Phase 5).
+- Propagated both changes everywhere they were previously stated:
+  `01_CLAUDE.md`'s repo map and decisions list, `02_BUILD_PLAN.md`'s
+  Phase 0/1 sections, `03_ARCHITECTURE_AND_PATTERNS_GUIDE.md`,
+  `04_TASKS.md`, `Lakbay.MockApi/CLAUDE.md` + `README.md` +
+  `.gitignore`, the published Lakbay Blueprint artifact, and the Lakbay
+  System Map diagram.
+
+**What's next:** unchanged from the previous entry — the rest of Phase 0
+scaffolding, now with the corrected stack for `Lakbay.MockApi` and the
+SQL Server Docker service to define for `Lakbay.Cms`/`Lakbay.Booking`.
+
+---
+
 ## 2026-09-03 — Repos created, Phase 0 documentation written
 
 **Asked:** Create the actual repositories for the Lakbay applications, and
