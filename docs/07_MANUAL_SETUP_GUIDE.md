@@ -10,11 +10,11 @@ assumed.
 handbook wins** — this file is a consolidation, not a second source of
 truth. Update both in the same commit if you change a setup step.
 
-**Current status:** Phase 0 is complete for every repo. `Lakbay.Cms` has a
-live database connection and a created admin account. `Lakbay.AvailabilityApi`
-is further ahead — Phase 1 is done for its query API (real resolvers, real
-seeded MongoDB data, 7 passing tests). See `04_TASKS.md` for exactly
-what's left.
+**Current status:** Phase 0 complete everywhere. `Lakbay.Cms` has a live
+database connection and a created admin account. `Lakbay.AvailabilityApi`
+Phase 1 is done (real resolvers, real seeded MongoDB data, 8 passing
+tests). `Lakbay.Web` Phase 2 is done — a real catalog storefront, verified
+in a browser. See `04_TASKS.md` for exactly what's left.
 
 ## 1. Prerequisites
 
@@ -264,20 +264,35 @@ npm run dev      # http://localhost:3000
 
 Optional: set `NEXT_PUBLIC_AVAILABILITY_API_URL` in a gitignored
 `.env.local` if `Lakbay.AvailabilityApi` isn't running on the default
-`http://localhost:5000`.
+`http://localhost:5170`.
 
 **Don't delete `AGENTS.md` in this repo** — Next.js 16 generates/re-adds it
 itself and it documents real breaking changes from older Next.js versions.
 Read it before writing App Router code here.
 
+**If you ever see "Module not found: Can't resolve '@lakbay/contracts'"**:
+this is a known Turbopack + sibling-repo gotcha, already fixed in
+`next.config.ts` (`transpilePackages` + a widened `turbopack.root`) and
+`tsconfig.json` (a `paths` alias) — see `Lakbay.Web`'s own
+`Docs/DEVELOPER_HANDBOOK.md` for the full explanation before changing
+either file.
+
 ## 8. Verify it end-to-end, not just repo-by-repo
 
 Run `Lakbay.AvailabilityApi`'s query API (§6) and `Lakbay.Web`'s dev server
-(§7) **at the same time**. Open `http://localhost:3000` — the homepage's
-`useGetStatusQuery()` call should round-trip through RTK Query, hit the
-real GraphQL API, and render its live response on the page. If that works,
-the entire chain (Redux Toolkit → RTK Query → GraphQL → HotChocolate) is
-proven, not just individually compiling pieces.
+(§7) **at the same time**. Open `http://localhost:3000` — the homepage
+should render all four product lines (Alon, Amihan, Parul, Pamana) with
+real names/taglines. Click into `/collections/alon`: you should see
+"Coron Island Hopping, 3 Days 2 Nights" from ₱12,500. Click into it for
+the full detail page (itinerary, board basis, availability, price bands).
+If all of that renders with real data (not an error banner, not a blank
+state), the entire chain — Redux Toolkit → RTK Query → GraphQL →
+HotChocolate → MongoDB → the actual seeded data — is proven end-to-end,
+not just individually compiling pieces. (A GraphQL query that only works
+via `curl` with inline literal arguments is *not* proof it works for a
+real client — see the `ProductFilterInput` gotcha in
+`Lakbay.AvailabilityApi`'s handbook for exactly why that distinction
+mattered here.)
 
 ## 9. What's genuinely not set up yet on this machine
 

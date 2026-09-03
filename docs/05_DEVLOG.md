@@ -6,6 +6,70 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-08 (4) — Phase 2: real Lakbay.Web storefront, verified in a browser, two real bugs found and fixed
+
+**Asked:** "Continue up to the end. Include context and put some real
+data or mock data but base on real world records and scenarios. I want to
+see the end results." Interpreted as: build the next real, demoable
+increment (Phase 2, the storefront) rather than attempting to fabricate a
+finished Phase 4/5 (real payments, real deployment) that would need
+external credentials and infrastructure this session doesn't have — and
+prove it actually works by looking at it, not just by describing it.
+
+**What changed:**
+
+- `Lakbay.Web`: three real pages (`/`, `/collections/[code]`,
+  `/holidays/[slug]`), typed RTK Query endpoints against
+  `Lakbay.Contracts`' generated types, a shared `catalog.ts` formatting
+  util (PHP currency, dates, board-basis labels), a site header/nav across
+  the four product lines. Visual identity reuses the exact palette from
+  the Lakbay Blueprint / System Map artifacts.
+- **Two real bugs found by actually running it, not by reading the
+  code:**
+  1. Turbopack refused to resolve `@lakbay/contracts` (a sibling-repo
+     `file:` dependency) even with the standard `transpilePackages` fix,
+     because it infers `Lakbay.Web`'s own lockfile as the workspace
+     boundary. Fixed with a `tsconfig.json` path alias *and* a widened
+     `turbopack.root` — confirmed neither alone was sufficient by testing
+     each in isolation.
+  2. `Lakbay.AvailabilityApi`'s `products(filter: $filter)` broke the
+     moment a real client (this storefront) sent `filter` as a proper
+     GraphQL variable — every prior `curl` test had used an inline
+     literal, which never exercises variable-type validation and so never
+     caught that HotChocolate had named the type `ProductFilterInput`,
+     not `ProductFilter` as the shared schema declares. Fixed with an
+     explicit type descriptor in `Lakbay.AvailabilityApi`; added a
+     regression test that specifically uses the real-variable path, since
+     none of the existing 7 did.
+  3. A smaller display bug ("Coron, Palawan, Palawan") caught in the
+     browser screenshot itself — a destination whose name already
+     includes its region was appending the region again. Fixed with a
+     small `destinationLocation()` helper.
+- **A repeated process-management slip, caught faster this time:**
+  rebuilding `Lakbay.AvailabilityApi` after the fix failed with a file
+  lock; the error named the exact locking PID, killed by that PID
+  specifically (not by process name) — no collateral damage this time,
+  unlike the `Lakbay.Cms` incident earlier this session.
+- Booking is a real, visibly disabled button ("coming in Phase 4") —
+  deliberately not a fake/stubbed checkout, since a real payment flow
+  needs PayMongo credentials this session doesn't have.
+- Verified live in the Browser pane: homepage renders all four product
+  lines; `/collections/alon` and `/collections/pamana` render their real
+  seeded products with correct pricing; `/holidays/coron-island-hopping-3d2n`
+  renders full itinerary/board-basis/availability/price-band detail.
+- Updated `Lakbay.Web`'s, `Lakbay.AvailabilityApi`'s, and
+  `Lakbay.Contracts`' own handbooks with both real gotchas and a proven
+  "adding a new page/catalog view" walkthrough (previously deferred).
+
+**What's next:** Phase 3 (`Lakbay.Cms` content/product trees — the
+`Lakbay.AvailabilityApi` sync trigger decision from `04_TASKS.md` becomes
+relevant here) or Phase 4 (`Lakbay.Booking` — real checkout, replacing the
+disabled button; needs a PayMongo sandbox account, which doesn't exist
+yet). Full production deployment (Phase 5) needs a real Azure environment
+and is out of scope for local development entirely.
+
+---
+
 ## 2026-09-08 (3) — Phase 1: real Lakbay.AvailabilityApi resolvers against MongoDB
 
 **Asked:** continue development, after fixing a gap in the setup guide

@@ -1,9 +1,11 @@
 # Tasks — Current Status
 
-**Current phase:** Phase 0 is complete across every repo. Phase 1 is done
-for `Lakbay.AvailabilityApi`'s query API. Next up: Phase 2
-(`Lakbay.Web`'s real catalog UI against it) or Phase 3
-(`Lakbay.Cms`'s content + product trees) — see `02_BUILD_PLAN.md`.
+**Current phase:** Phase 0 complete everywhere. Phase 1 done
+(`Lakbay.AvailabilityApi`'s query API). Phase 2 done (`Lakbay.Web`'s real
+catalog storefront, verified end-to-end in a browser against live seeded
+PH data). Next up: Phase 3 (`Lakbay.Cms`'s content + product trees) or
+Phase 4 (`Lakbay.Booking` — real checkout, replacing the honestly-disabled
+"Book this holiday" button) — see `02_BUILD_PLAN.md`.
 
 ## Done
 
@@ -136,6 +138,35 @@ for `Lakbay.AvailabilityApi`'s query API. Next up: Phase 2
       handbook, and its README updated to match — including a real,
       proven "adding a new query field" walkthrough (previously deferred
       as "not applicable yet").
+
+## Done — Phase 2 (Lakbay.Web catalog storefront), 2026-09-08
+
+- [x] Real pages: `/` (all four product lines), `/collections/[code]`
+      (products in a line), `/holidays/[slug]` (full detail) — all
+      querying live `Lakbay.AvailabilityApi` data, no placeholders.
+- [x] Typed RTK Query endpoints (`getProductLines`, `getDestinations`,
+      `getProducts`, `getProduct`) hand-written against
+      `Lakbay.Contracts`' generated types, `transformResponse` throwing on
+      GraphQL `errors` rather than silently returning `undefined`.
+- [x] Verified in an actual browser (screenshots across three of the four
+      collections), not just a clean `npm run build`.
+- [x] **A real Turbopack + local-workspace-package gotcha, found and
+      fixed**: `@lakbay/contracts` (a `file:` dependency shipping raw
+      `.ts`) wouldn't resolve under Next 16's Turbopack even with the
+      standard `transpilePackages` fix, because Turbopack infers
+      `Lakbay.Web`'s own `package-lock.json` as the workspace root and
+      refuses files outside it. Fixed with a `tsconfig.json` `paths`
+      alias *plus* a widened `turbopack.root` — neither alone was enough.
+- [x] **A real HotChocolate schema-naming bug, found only by a proper
+      GraphQL client, not `curl`**: `ProductFilter` was being served as
+      `ProductFilterInput` (HotChocolate's default naming convention),
+      invisible to every existing `curl` test because they all passed
+      `filter` as an inline literal rather than a `$filter: ProductFilter`
+      variable — exactly what `Lakbay.Web` does. Fixed with an explicit
+      `ProductFilterInputType` descriptor; a regression test now covers
+      the real-variable path specifically.
+- [x] Booking is an honestly-disabled button ("coming in Phase 4") — not
+      a fake/stubbed checkout flow.
 
 ## Not done — rest of Phase 0/1
 
