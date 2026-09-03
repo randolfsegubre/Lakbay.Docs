@@ -1,0 +1,204 @@
+# Manual Setup Guide — the whole Lakbay stack, start to finish
+
+One linear walkthrough, in dependency order, consolidating what's already
+proven working in each repo's own `Docs/DEVELOPER_HANDBOOK.md`. Written so
+you can set this up **without an AI agent** — every command below has
+actually been run on this machine and its real output is quoted, not
+assumed.
+
+**If this document and a repo's own handbook ever disagree, the repo's own
+handbook wins** — this file is a consolidation, not a second source of
+truth. Update both in the same commit if you change a setup step.
+
+**Current status:** Phase 0 is functionally complete for `Lakbay.Contracts`,
+`Lakbay.Booking`, `Lakbay.Web`, and `Lakbay.AvailabilityApi`'s query API
+(all boot and pass their smoke test with zero external services). `Lakbay.Cms`
+additionally has a live database connection as of 2026-09-08. See
+`04_TASKS.md` for exactly what's left.
+
+## 1. Prerequisites
+
+| Tool | Version confirmed on this machine | Needed for |
+|---|---|---|
+| .NET SDK | 10.0.400 | `Lakbay.Contracts` (C# side), `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.AvailabilityApi` |
+| Node.js | 24.18.0 (any 20+ should work) | `Lakbay.Contracts` (TS side), `Lakbay.Web` |
+| npm | 11.16.0 | same as Node.js |
+| Docker Desktop | 29.7.2 | SQL Server (`Lakbay.Cms`/`Lakbay.Booking`, ADR-0005) — daemon must actually be running, not just installed (`docker ps` should return a table, not a connection error) |
+| Azure Functions Core Tools (`func`) | **not installed** as of 2026-09-08 | `Lakbay.AvailabilityApi.Sync` only, and only once Phase 4 gives it a real trigger to run — not needed for anything below |
+| MongoDB | **not installed** as of 2026-09-08 | `Lakbay.AvailabilityApi`'s query API resolvers, Phase 1 — no compose file exists yet for this (see §8) |
+
+Check what you actually have before starting:
+
+```bash
+dotnet --version && node --version && npm --version && docker --version && docker ps
+```
+
+## 2. Repo layout
+
+All six repos are siblings under one folder, not nested inside each other:
+
+```
+Personal_Projects/Lakbay/
+  Lakbay.Docs/            this repo — no application code
+  Lakbay.Contracts/       set up FIRST — everything else references it
+  Lakbay.Cms/
+  Lakbay.Booking/
+  Lakbay.AvailabilityApi/
+  Lakbay.Web/
+```
+
+Set them up in that order. `Lakbay.Cms`, `Lakbay.Booking`, and
+`Lakbay.AvailabilityApi` all take a **project reference** (not a package)
+to `../Lakbay.Contracts/csharp/Lakbay.Contracts.csproj`, and `Lakbay.Web`
+takes a `file:` dependency on `../Lakbay.Contracts/typescript` — none of
+them will build until `Lakbay.Contracts` exists on disk in the right
+relative position.
+
+## 3. Lakbay.Contracts — the shared schema (no dependencies, no database)
+
+```bash
+cd Lakbay.Contracts
+
+# TypeScript side
+cd typescript
+npm install
+npm run codegen        # writes generated/types.ts from ../schema/lakbay.graphql
+npx tsc --noEmit        # should report zero errors
+
+# C# side
+cd ../csharp
+dotnet build            # should report 0 Warning(s), 0 Error(s)
+```
+
+No Docker, no database — this repo is schema and generated types only.
+
+## 4. Lakbay.Cms — Umbraco 18, unified content + product catalog
+
+```bash
+cd ../../Lakbay.Cms
+
+# 1. Local-only SQL Server password (gitignored — never a real secret):
+cp .env.example .env
+# edit .env, set DB_PASSWORD to whatever you want locally
+
+# 2. Start SQL Server (Developer Edition, free, in Docker):
+docker compose up -d
+# wait for it to report healthy:
+docker inspect --format='{{.State.Health.Status}}' lakbay_sqlserver
+# creates BOTH umbracoDb (this repo) and lakbayBookingDb (Lakbay.Booking)
+# on one shared local SQL Server instance — still two fully separate
+# databases (ADR-0003), one container purely for local-dev convenience.
+
+# 3. Point the app at it via .NET user-secrets — NEVER appsettings.json,
+#    so the password never lands in a committed file:
+cd src/Lakbay.Cms.Web
+dotnet user-secrets set "ConnectionStrings:umbracoDbDSN" \
+  "Server=localhost,1433;Database=umbracoDb;User Id=sa;Password=<your DB_PASSWORD from .env>;TrustServerCertificate=true"
+dotnet user-secrets set "ConnectionStrings:umbracoDbDSN_ProviderName" "Microsoft.Data.SqlClient"
+
+# 4. Run it:
+dotnet run --project src/Lakbay.Cms.Web
+```
+
+Open `https://localhost:44330/umbraco` (check the console output for the
+actual port — it can vary) and complete the install wizard's admin-account
+step yourself: real email, real password, your choice. This is the one
+step in the whole setup that's deliberately manual — nobody should script
+or hand you a value for your own CMS login.
+
+That finishes Phase 0 for this repo and is the actual starting point for
+Phase 3 (building the Content + Products trees, ADR-0001).
+
+## 5. Lakbay.Booking — orders, basket, availability (no database yet)
+
+```bash
+cd ../../../Lakbay.Booking
+dotnet build     # 0 Warning(s), 0 Error(s)
+dotnet test      # 1 passed — the /health endpoint boots
+dotnet run --project src/Lakbay.Booking.Api
+# GET http://localhost:<port>/health → {"status":"ok","service":"Lakbay.Booking"}
+```
+
+No database needed for this much — Phase 0 only proves the service boots.
+**When real work starts here (Phase 4):** don't stand up a second SQL
+Server container. Reuse the one `Lakbay.Cms` already starts (§4 above) —
+`lakbayBookingDb` is already created on it — and point this repo's own
+connection string at `Server=localhost,1433;Database=lakbayBookingDb;...`
+via `dotnet user-secrets`, same reasoning as `Lakbay.Cms`.
+
+## 6. Lakbay.AvailabilityApi — the query API half (no MongoDB yet)
+
+Two deployables in one repo (ADR-0009) — you're setting up the query API
+here; the `Sync` Azure Function needs `func` and a real trigger, neither
+of which exist yet (Phase 4), so there's nothing to run there today.
+
+```bash
+cd ../../Lakbay.AvailabilityApi
+dotnet build     # 0 Warning(s), 0 Error(s) across all 3 projects
+dotnet test tests/Lakbay.AvailabilityApi.Tests/Lakbay.AvailabilityApi.Tests.csproj
+# 1 passed
+
+dotnet run --project src/Lakbay.AvailabilityApi.Api
+# runs on :5000 by default in this setup
+```
+
+**Important:** run it with `ASPNETCORE_ENVIRONMENT=Development` set (plain
+`dotnet run` does this automatically via `launchSettings.json`; if you use
+`--no-launch-profile` you must set it yourself) — the CORS allow-list that
+lets `Lakbay.Web` call this locally only loads from
+`appsettings.Development.json`. Without it, the browser preflight from
+`Lakbay.Web` 404s and nothing obviously tells you why.
+
+## 7. Lakbay.Web — the storefront
+
+```bash
+cd ../Lakbay.Web
+npm install
+npm run build    # compiles clean
+npm run lint     # zero errors
+npm run dev      # http://localhost:3000
+```
+
+Optional: set `NEXT_PUBLIC_AVAILABILITY_API_URL` in a gitignored
+`.env.local` if `Lakbay.AvailabilityApi` isn't running on the default
+`http://localhost:5000`.
+
+**Don't delete `AGENTS.md` in this repo** — Next.js 16 generates/re-adds it
+itself and it documents real breaking changes from older Next.js versions.
+Read it before writing App Router code here.
+
+## 8. Verify it end-to-end, not just repo-by-repo
+
+Run `Lakbay.AvailabilityApi`'s query API (§6) and `Lakbay.Web`'s dev server
+(§7) **at the same time**. Open `http://localhost:3000` — the homepage's
+`useGetStatusQuery()` call should round-trip through RTK Query, hit the
+real GraphQL API, and render its live response on the page. If that works,
+the entire chain (Redux Toolkit → RTK Query → GraphQL → HotChocolate) is
+proven, not just individually compiling pieces.
+
+## 9. What's genuinely not set up yet on this machine
+
+Don't go looking for these — they don't exist yet, and nothing above needs
+them:
+
+- **MongoDB** for `Lakbay.AvailabilityApi`'s real resolvers (Phase 1) — no
+  Docker Compose file written for this yet. When it's added, it'll live in
+  `Lakbay.AvailabilityApi/docker-compose.yml`, following the same pattern
+  as `Lakbay.Cms`'s SQL Server one.
+- **Azure Functions Core Tools** (`func` CLI) — needed only to actually run
+  `Lakbay.AvailabilityApi.Sync` locally (it builds fine without it). Install
+  when Phase 4 gives that Function a real trigger to fire on.
+- **An Azure Service Bus emulator** (Phase 4, real-time availability
+  propagation, ADR-0008) — can run in Docker for fully offline dev once
+  that phase starts.
+- **CI** — no pipeline exists in any repo yet.
+- **GitHub remotes** — every repo above is local-only right now, on
+  purpose (open decision, see `04_TASKS.md`).
+
+## 10. If something doesn't match this document
+
+This guide is only as current as the day it was written. Each repo's own
+`Docs/DEVELOPER_HANDBOOK.md` is updated the moment its setup actually
+changes — check there first if a command above stops working, and update
+both files together once you've confirmed the fix, so the next person
+(human or AI) doesn't hit the same gap.

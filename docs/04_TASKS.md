@@ -99,11 +99,21 @@ remains before Phase 0 is fully closed out (see `02_BUILD_PLAN.md`).
       boots against the real database — backoffice module bundle loads
       clean, no exceptions, listening on both configured ports.
 
+## Done — Lakbay.Cms Phase 0 fully closed out, 2026-09-08
+
+- [x] Umbraco install wizard's admin-account step completed by Randolf
+      through the browser. Credential itself deliberately not recorded
+      anywhere in this repo or memory — even for a local-only environment,
+      nothing gitignored-adjacent should carry a real password, since a
+      repo's local-only status can change later and memory syncs across
+      machines. `Lakbay.Cms` now has a working backoffice login.
+- [x] Consolidated `07_MANUAL_SETUP_GUIDE.md` written — one linear,
+      dependency-ordered walkthrough across all five application repos,
+      pulling proven commands from each repo's own
+      `Docs/DEVELOPER_HANDBOOK.md` rather than restating from memory.
+
 ## Not done — rest of Phase 0
 
-- [ ] Complete the Umbraco install wizard's admin-account step through the
-      browser (`https://localhost:44330/umbraco`) — deliberately left
-      manual, it's a real credential choice, not something to script.
 - [ ] MongoDB for `Lakbay.AvailabilityApi` — no compose file written for
       this yet (Phase 1 work, not blocking Phase 0's exit criteria, which
       only required the query API to boot and answer introspection — done).

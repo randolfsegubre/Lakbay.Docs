@@ -6,6 +6,35 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-08 (2) — Consolidated manual setup guide; Lakbay.Cms admin account created
+
+**Asked:** a single guide for setting up the whole stack manually, without
+relying on an AI agent to run the commands each time.
+
+**What changed:**
+
+- Wrote `07_MANUAL_SETUP_GUIDE.md`: one linear, dependency-ordered
+  walkthrough (Contracts → Cms → Booking → AvailabilityApi → Web) built
+  from what each repo's own `Docs/DEVELOPER_HANDBOOK.md` already had
+  proven working, plus a fresh tool-version check on this machine
+  (`dotnet 10.0.400`, `node 24.18.0`, `docker 29.7.2`; `func` and `mongod`
+  confirmed still absent) so nothing in it is stated from memory.
+- Randolf completed the Umbraco install wizard's admin-account step in the
+  browser and offered the credential directly, since the environment is
+  local-only. Declined to record the actual password anywhere — not this
+  devlog, not `04_TASKS.md`, not memory — on the reasoning that a repo's
+  "local-only" status is a current fact, not a permanent guarantee (the
+  GitHub-remotes decision is still open), and credentials shouldn't
+  normalize into version-controlled or cross-machine-synced text. Recorded
+  only that the step is done.
+
+**What's next:** unchanged from the prior entry — Phase 3 content/product
+trees in `Lakbay.Cms`, or Phase 1 real resolvers in `Lakbay.AvailabilityApi`,
+whichever Randolf wants to pick up first. MongoDB compose, CI, and the
+GitHub-remotes decision are still open and still non-blocking.
+
+---
+
 ## 2026-09-08 — Docker unblocked by machine restart; SQL Server live, Umbraco boots against a real DB
 
 **Asked:** "I have restarted the machine. What's next?" — the previous
