@@ -23,15 +23,102 @@ additionally has a live database connection as of 2026-09-08. See
 | .NET SDK | 10.0.400 | `Lakbay.Contracts` (C# side), `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.AvailabilityApi` |
 | Node.js | 24.18.0 (any 20+ should work) | `Lakbay.Contracts` (TS side), `Lakbay.Web` |
 | npm | 11.16.0 | same as Node.js |
-| Docker Desktop | 29.7.2 | SQL Server (`Lakbay.Cms`/`Lakbay.Booking`, ADR-0005) — daemon must actually be running, not just installed (`docker ps` should return a table, not a connection error) |
+| Docker Desktop | 29.7.2 | SQL Server (`Lakbay.Cms`/`Lakbay.Booking`, ADR-0005) and, from §8 on, MongoDB — daemon must actually be running, not just installed (`docker ps` should return a table, not a connection error) |
 | Azure Functions Core Tools (`func`) | **not installed** as of 2026-09-08 | `Lakbay.AvailabilityApi.Sync` only, and only once Phase 4 gives it a real trigger to run — not needed for anything below |
-| MongoDB | **not installed** as of 2026-09-08 | `Lakbay.AvailabilityApi`'s query API resolvers, Phase 1 — no compose file exists yet for this (see §8) |
 
 Check what you actually have before starting:
 
 ```bash
 dotnet --version && node --version && npm --version && docker --version && docker ps
 ```
+
+### 1a. Installing whatever's missing (Windows — this machine)
+
+Each tool below is genuinely doing one job in this project; the note says
+what that job is so a command isn't just something to copy blindly.
+
+**.NET SDK** — compiles and runs every C# project in this platform
+(`Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.AvailabilityApi`, and the C#
+half of `Lakbay.Contracts`). Without it, `dotnet build`/`dotnet run` don't
+exist as commands at all.
+
+```powershell
+winget install Microsoft.DotNet.SDK.10
+```
+
+Close and reopen your terminal afterward — `PATH` changes from an
+installer don't apply to an already-open shell. Verify: `dotnet --version`.
+
+**Node.js** (npm comes bundled with it) — runs the TypeScript codegen for
+`Lakbay.Contracts` and is the entire runtime `Lakbay.Web` (Next.js) builds
+and runs on. Without it, `npm install`/`npm run dev` don't exist.
+
+```powershell
+winget install OpenJS.NodeJS
+```
+
+Verify: `node --version` and `npm --version`. Reopen your terminal first
+if either command isn't found.
+
+**Docker Desktop** — runs SQL Server and MongoDB as disposable containers
+so you never install a database server directly onto your machine, and so
+"start the database" is one command instead of a multi-step native
+install. This is what ADR-0005 means by "local dev runs SQL Server in
+Docker."
+
+```powershell
+winget install -e --id Docker.DockerDesktop
+```
+
+**This one needs a machine restart to finish** (it installs a Windows
+virtualization feature) — that's the exact restart this project's own
+history already went through. After restarting, open Docker Desktop once
+from the Start menu and wait for it to say "Docker Desktop is running"
+before trying `docker` commands from a terminal. Verify: `docker ps`
+should print an empty table, not a connection error.
+
+**Azure Functions Core Tools** (`func`) — not needed for anything in this
+guide yet. When `Lakbay.AvailabilityApi.Sync` gets a real trigger (Phase
+4), install it via npm (the officially documented method, more reliable
+than guessing a package manager ID from memory):
+
+```powershell
+npm install -g azure-functions-core-tools@4 --unsafe-perm true
+```
+
+### 1b. A one-sentence job description for the CLI verbs you'll actually type
+
+If you're newer to these tools, this is what each recurring command is
+doing — not a full tutorial, just enough to know why you're typing it:
+
+- **`dotnet build`** — compiles a C# project/solution without running it;
+  the fastest way to check "does this still compile" after an edit.
+- **`dotnet run --project <path>`** — compiles (if needed) and starts a
+  C# project as a running process; used for anything that's a server
+  (`Lakbay.Cms.Web`, the two `.Api` projects) rather than a library.
+- **`dotnet test`** — runs a project's xUnit tests and reports pass/fail;
+  every `Lakbay.*.Tests` project in this platform is run this way.
+- **`dotnet user-secrets set <key> <value>`** — writes a key/value pair to
+  a per-project store *outside* the repo (on Windows:
+  `%APPDATA%\Microsoft\UserSecrets\<a GUID from the .csproj>\secrets.json`)
+  so a connection string with a real password never has a chance to be
+  committed, even by accident. It's read automatically at startup in the
+  Development environment — no code change needed to use it.
+- **`npm install`** — reads `package.json` and downloads every dependency
+  it lists into `node_modules/` (gitignored — never committed, always
+  regenerated from `package.json` + `package-lock.json`).
+- **`npm run <script>`** — runs a named script from `package.json`'s
+  `"scripts"` block (e.g. `npm run codegen`, `npm run dev`, `npm run
+  build`) — a project-specific shortcut, not a built-in npm command.
+- **`docker compose up -d`** — reads a `docker-compose.yml` in the current
+  directory and starts every container it describes, in the background
+  (`-d` = detached, so it doesn't tie up your terminal). Every
+  `docker-compose.yml` in this platform starts a database only — the
+  applications themselves always run natively via `dotnet run`/`npm run
+  dev`, never inside the compose file, so you still get fast hot-reload.
+- **`docker ps`** — lists currently running containers; the fastest way to
+  confirm "is the database actually up" before assuming a connection
+  failure is a code problem.
 
 ## 2. Repo layout
 
