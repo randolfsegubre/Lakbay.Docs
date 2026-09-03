@@ -10,11 +10,11 @@ assumed.
 handbook wins** — this file is a consolidation, not a second source of
 truth. Update both in the same commit if you change a setup step.
 
-**Current status:** Phase 0 is functionally complete for `Lakbay.Contracts`,
-`Lakbay.Booking`, `Lakbay.Web`, and `Lakbay.AvailabilityApi`'s query API
-(all boot and pass their smoke test with zero external services). `Lakbay.Cms`
-additionally has a live database connection as of 2026-09-08. See
-`04_TASKS.md` for exactly what's left.
+**Current status:** Phase 0 is complete for every repo. `Lakbay.Cms` has a
+live database connection and a created admin account. `Lakbay.AvailabilityApi`
+is further ahead — Phase 1 is done for its query API (real resolvers, real
+seeded MongoDB data, 7 passing tests). See `04_TASKS.md` for exactly
+what's left.
 
 ## 1. Prerequisites
 
@@ -23,7 +23,7 @@ additionally has a live database connection as of 2026-09-08. See
 | .NET SDK | 10.0.400 | `Lakbay.Contracts` (C# side), `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.AvailabilityApi` |
 | Node.js | 24.18.0 (any 20+ should work) | `Lakbay.Contracts` (TS side), `Lakbay.Web` |
 | npm | 11.16.0 | same as Node.js |
-| Docker Desktop | 29.7.2 | SQL Server (`Lakbay.Cms`/`Lakbay.Booking`, ADR-0005) and, from §8 on, MongoDB — daemon must actually be running, not just installed (`docker ps` should return a table, not a connection error) |
+| Docker Desktop | 29.7.2 | SQL Server (`Lakbay.Cms`/`Lakbay.Booking`, ADR-0005, §4) and MongoDB (`Lakbay.AvailabilityApi`, §6) — daemon must actually be running, not just installed (`docker ps` should return a table, not a connection error) |
 | Azure Functions Core Tools (`func`) | **not installed** as of 2026-09-08 | `Lakbay.AvailabilityApi.Sync` only, and only once Phase 4 gives it a real trigger to run — not needed for anything below |
 
 Check what you actually have before starting:
@@ -213,7 +213,7 @@ Server container. Reuse the one `Lakbay.Cms` already starts (§4 above) —
 connection string at `Server=localhost,1433;Database=lakbayBookingDb;...`
 via `dotnet user-secrets`, same reasoning as `Lakbay.Cms`.
 
-## 6. Lakbay.AvailabilityApi — the query API half (no MongoDB yet)
+## 6. Lakbay.AvailabilityApi — the query API half (real resolvers, real MongoDB)
 
 Two deployables in one repo (ADR-0009) — you're setting up the query API
 here; the `Sync` Azure Function needs `func` and a real trigger, neither
@@ -221,12 +221,28 @@ of which exist yet (Phase 4), so there's nothing to run there today.
 
 ```bash
 cd ../../Lakbay.AvailabilityApi
+
+# Start MongoDB — no auth, local-only:
+docker compose up -d
+docker inspect --format='{{.State.Health.Status}}' lakbay_mongo   # wait for "healthy"
+
 dotnet build     # 0 Warning(s), 0 Error(s) across all 3 projects
 dotnet test tests/Lakbay.AvailabilityApi.Tests/Lakbay.AvailabilityApi.Tests.csproj
-# 1 passed
+# 7 passed — the test suite spins up its OWN ephemeral MongoDB via
+# Testcontainers, separate from the one you just started above
 
 dotnet run --project src/Lakbay.AvailabilityApi.Api
-# runs on :5000 by default in this setup
+# runs on :5170 in this setup (check console output — launchSettings.json
+# can reassign this). First run against an empty database seeds four
+# ProductLine records and one real destination/product per line (Coron,
+# Baguio, San Fernando Pampanga, Vigan) automatically.
+```
+
+Verify it's really serving real data, not just booting:
+
+```bash
+curl -s http://localhost:5170/graphql -H "Content-Type: application/json" \
+  -d '{"query":"{ productLines { code name } }"}'
 ```
 
 **Important:** run it with `ASPNETCORE_ENVIRONMENT=Development` set (plain
@@ -268,10 +284,6 @@ proven, not just individually compiling pieces.
 Don't go looking for these — they don't exist yet, and nothing above needs
 them:
 
-- **MongoDB** for `Lakbay.AvailabilityApi`'s real resolvers (Phase 1) — no
-  Docker Compose file written for this yet. When it's added, it'll live in
-  `Lakbay.AvailabilityApi/docker-compose.yml`, following the same pattern
-  as `Lakbay.Cms`'s SQL Server one.
 - **Azure Functions Core Tools** (`func` CLI) — needed only to actually run
   `Lakbay.AvailabilityApi.Sync` locally (it builds fine without it). Install
   when Phase 4 gives that Function a real trigger to fire on.

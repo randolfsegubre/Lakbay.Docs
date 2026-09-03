@@ -6,6 +6,65 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-08 (3) — Phase 1: real Lakbay.AvailabilityApi resolvers against MongoDB
+
+**Asked:** continue development, after fixing a gap in the setup guide
+(it was missing tool-installation instructions — fixed first, see
+`07_MANUAL_SETUP_GUIDE.md`'s own history).
+
+**What changed:**
+
+- Added `MongoDB.Driver` to `Lakbay.AvailabilityApi.Api` and
+  `Testcontainers.MongoDb` to its test project.
+- Wrote `MongoClassMaps` (maps `Lakbay.Contracts`' plain POCOs onto Mongo
+  documents via an Adapter, without putting Mongo attributes on the
+  shared Contracts types), `CatalogContext` (typed collection access),
+  and `CatalogSeeder` (idempotent, real Philippine seed data).
+- Rewrote `Query.cs`: `productLines`, `destinations(productLine:)`,
+  `products(filter:)`, `product(slug:)` — matching
+  `schema/lakbay.graphql` exactly. `products`' filter logic is hand-built
+  from the explicit `ProductFilter` input (not HotChocolate's
+  `[UseFiltering]`, which would auto-generate a different argument shape
+  and break parity with `Lakbay.Contracts`) — price/date bounds combine
+  into a single `PriceBands` `ElemMatch` so they're checked against the
+  *same* band, not independently against any band.
+- Added a `docker-compose.yml` for MongoDB (no auth, unlike SQL Server —
+  nothing secret to protect locally).
+- **Verified for real, twice over:** `dotnet test` (7 passed, against a
+  real Testcontainers-managed MongoDB, not mocks) and manually via `curl`
+  against a live running instance with real seeded data — including
+  filtering (`AMIHAN` + `minPricePhp: 5000` correctly returned only the
+  Baguio product at ₱6,800, excluding everything below the floor).
+- **A real bug, caught and fixed via the live run, not just by
+  inspection:** `productLines` initially failed with an opaque
+  "Unexpected Execution Error." `Destination` and `Product` both map
+  their `Id` property to Mongo's `_id`; `ProductLine` has no `Id`
+  property (its key is the `Code` enum), so it was left to Mongo's
+  auto-assigned `_id` — which then had no matching C# member during
+  deserialization, and `BsonClassMap` throws on unmapped document fields
+  by default. Fixed with `SetIgnoreExtraElements(true)` on `ProductLine`'s
+  class map specifically. Documented in that repo's own handbook so it
+  doesn't look like a fresh mystery next time a type without a natural id
+  needs the same treatment.
+- **An unrelated slip, caught and fixed in the same session:** restarting
+  the API after that fix used `taskkill /F /IM dotnet.exe`, which killed
+  every dotnet process on the machine — including the unrelated
+  `Lakbay.Cms` Umbraco server still running from an earlier session.
+  Restarted it and confirmed it came back up clean (still HTTP 200 on
+  `/umbraco`). Worth remembering: target a specific PID next time, not a
+  process name, when more than one `dotnet run` might be alive.
+- Updated `Lakbay.AvailabilityApi`'s own `Docs/DEVELOPER_HANDBOOK.md` with
+  a real, proven "adding a new query field" walkthrough (previously
+  deferred as "not applicable yet" in the Phase 0 entry below) and its
+  README; updated `07_MANUAL_SETUP_GUIDE.md` §6/§9 and `04_TASKS.md` to
+  match.
+
+**What's next:** Phase 2 (`Lakbay.Web`'s real catalog UI, querying this
+API instead of a placeholder) or Phase 3 (`Lakbay.Cms`'s content/product
+trees) — both are genuinely available now; neither blocks the other.
+
+---
+
 ## 2026-09-08 (2) — Consolidated manual setup guide; Lakbay.Cms admin account created
 
 **Asked:** a single guide for setting up the whole stack manually, without

@@ -1,8 +1,9 @@
 # Tasks — Current Status
 
-**Current phase:** Phase 0 — Foundation & scaffolding. Docker was the last
-blocker and is now clear; only the manual Umbraco admin-account step
-remains before Phase 0 is fully closed out (see `02_BUILD_PLAN.md`).
+**Current phase:** Phase 0 is complete across every repo. Phase 1 is done
+for `Lakbay.AvailabilityApi`'s query API. Next up: Phase 2
+(`Lakbay.Web`'s real catalog UI against it) or Phase 3
+(`Lakbay.Cms`'s content + product trees) — see `02_BUILD_PLAN.md`.
 
 ## Done
 
@@ -112,14 +113,35 @@ remains before Phase 0 is fully closed out (see `02_BUILD_PLAN.md`).
       pulling proven commands from each repo's own
       `Docs/DEVELOPER_HANDBOOK.md` rather than restating from memory.
 
-## Not done — rest of Phase 0
+## Done — Phase 1 (Lakbay.AvailabilityApi query API), 2026-09-08
 
-- [ ] MongoDB for `Lakbay.AvailabilityApi` — no compose file written for
-      this yet (Phase 1 work, not blocking Phase 0's exit criteria, which
-      only required the query API to boot and answer introspection — done).
+- [x] Real `productLines`/`destinations`/`products`/`product` resolvers
+      against MongoDB, matching schema/lakbay.graphql field-for-field —
+      no `[UseFiltering]`, hand-built `FilterDefinition<T>` from the
+      explicit `ProductFilter` input so the field signature stays in sync
+      with `Lakbay.Contracts`.
+- [x] MongoDB via Docker Compose (`lakbay_mongo`, no auth — local-only,
+      nothing secret to protect, unlike SQL Server).
+- [x] `CatalogSeeder` — real Philippine destinations/products (Coron/Alon,
+      Baguio/Amihan, San Fernando Pampanga/Parul, Vigan/Pamana), not
+      placeholder data, seeded idempotently on startup.
+- [x] 7 xUnit tests via Testcontainers.MongoDb — a real ephemeral
+      database per test run, not a mock; each test isolated to its own
+      database name.
+- [x] Verified live via `curl`, not just via the test suite — including a
+      real bug caught and fixed (`ProductLine`'s missing `Id` member
+      needed `IgnoreExtraElements` on its Mongo class map; see that
+      repo's `Docs/DEVELOPER_HANDBOOK.md` for the full explanation).
+- [x] `07_MANUAL_SETUP_GUIDE.md`, `Lakbay.AvailabilityApi`'s own
+      handbook, and its README updated to match — including a real,
+      proven "adding a new query field" walkthrough (previously deferred
+      as "not applicable yet").
+
+## Not done — rest of Phase 0/1
+
 - [ ] Decide the Cms → AvailabilityApi sync trigger mechanism (Umbraco
       event, Service Bus message, or scheduled job) — flagged by ADR-0007,
-      genuinely Phase 1/3 work, not Phase 0.
+      genuinely Phase 1/3 work.
 - [ ] CI skeleton in every repo — not started.
 - [ ] A concurrency test in `Lakbay.Booking` proving the atomic decrement
       actually prevents double-booking under simulated simultaneous
