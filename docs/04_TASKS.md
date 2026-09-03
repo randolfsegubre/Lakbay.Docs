@@ -1,7 +1,8 @@
 # Tasks — Current Status
 
-**Current phase:** Phase 0 — Foundation & scaffolding, functionally
-complete for everything doable without Docker (see `02_BUILD_PLAN.md`).
+**Current phase:** Phase 0 — Foundation & scaffolding. Docker was the last
+blocker and is now clear; only the manual Umbraco admin-account step
+remains before Phase 0 is fully closed out (see `02_BUILD_PLAN.md`).
 
 ## Done
 
@@ -87,16 +88,22 @@ complete for everything doable without Docker (see `02_BUILD_PLAN.md`).
       yet run, Docker Desktop install was still in progress at end of
       session.
 
-## Not done — rest of Phase 0 (all blocked on Docker Desktop)
+## Done — Docker unblocked, 2026-09-08
 
-- [ ] Docker Desktop finish installing (`winget install -e --id
-      Docker.DockerDesktop`, needs a restart) — everything below is
-      blocked on this specifically, nothing else.
-- [ ] `docker compose up -d` from `Lakbay.Cms` — creates the shared local
-      SQL Server instance.
-- [ ] Complete the Umbraco install wizard for real (admin user + the now-
-      available database connection, via `dotnet user-secrets`, already
-      initialized for `Lakbay.Cms.Web`).
+- [x] Docker Desktop finished installing after the machine restart;
+      confirmed running (`docker ps` reachable, daemon up).
+- [x] `docker compose up -d` from `Lakbay.Cms` — SQL Server container
+      built and healthy (`lakbay_sqlserver`, both `umbracoDb` and
+      `lakbayBookingDb` created per `Database/setup.sql`).
+- [x] Connection string wired via `dotnet user-secrets`; `Lakbay.Cms.Web`
+      boots against the real database — backoffice module bundle loads
+      clean, no exceptions, listening on both configured ports.
+
+## Not done — rest of Phase 0
+
+- [ ] Complete the Umbraco install wizard's admin-account step through the
+      browser (`https://localhost:44330/umbraco`) — deliberately left
+      manual, it's a real credential choice, not something to script.
 - [ ] MongoDB for `Lakbay.AvailabilityApi` — no compose file written for
       this yet (Phase 1 work, not blocking Phase 0's exit criteria, which
       only required the query API to boot and answer introspection — done).

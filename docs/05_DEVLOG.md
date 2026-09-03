@@ -6,6 +6,45 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-08 — Docker unblocked by machine restart; SQL Server live, Umbraco boots against a real DB
+
+**Asked:** "I have restarted the machine. What's next?" — the previous
+session had left exactly one blocker recorded in `04_TASKS.md`: Docker
+Desktop's install needed a restart to finish.
+
+**What changed:**
+
+- Confirmed Docker Desktop actually finished installing and the daemon is
+  reachable (`docker ps`).
+- Ran `Lakbay.Cms`'s proven Phase 0 sequence from its own
+  `Docs/DEVELOPER_HANDBOOK.md`: created `.env` with a local-only SQL
+  Server password (gitignored, confirmed via `git check-ignore`),
+  `docker compose up -d`, polled until `lakbay_sqlserver` reported
+  `healthy`, wired the connection string via `dotnet user-secrets`
+  (never `appsettings`), and started `Lakbay.Cms.Web`.
+- Verified for real, not assumed: the app is listening on both configured
+  ports, the backoffice module bundle loads with no exceptions in the
+  log, and `curl` against `/umbraco` returns 200 with no error/exception
+  markers in the response — the install wizard is live against a real
+  database connection.
+- Deliberately did **not** complete the wizard's admin-account step
+  (email/password/name) — that's a real credential choice for whoever
+  owns this CMS, not something to script or invent a value for. Left the
+  server running; the browser step is the one thing still manual.
+- Updated `Lakbay.Cms/Docs/DEVELOPER_HANDBOOK.md` and this platform's
+  `04_TASKS.md` to move these steps from "pending Docker" to "proven
+  working," matching the project's own rule that handbooks record what
+  was actually verified, not what was planned.
+
+**What's next:** open `https://localhost:44330/umbraco` in a browser and
+finish the install wizard's admin-account step — that closes out Phase 0
+for `Lakbay.Cms` entirely and is the actual start of Phase 3 (real content
++ product trees, per ADR-0001). Separately, still open: MongoDB compose
+for `Lakbay.AvailabilityApi`, CI skeletons in every repo, and the
+GitHub-remotes decision — none blocked on anything now.
+
+---
+
 ## 2026-09-06 (4) — Phase 0 implementation: all five repos scaffolded and verified
 
 **Asked:** "Let's start implementing. Go ahead and do the implementations
