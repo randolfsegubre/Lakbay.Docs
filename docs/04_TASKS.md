@@ -1,5 +1,19 @@
 # Tasks — Current Status
 
+**2026-09-08 — Phase 7 (Agent Channel) built and verified live, without Docker.**
+Two new repos (`Lakbay.AgentDesktop`, `Lakbay.AgentOps`) plus real
+`Lakbay.Booking` domain code now exist — see ADR-0021 through ADR-0026 and
+the 2026-09-08 devlog entry for the full build and verification trail.
+Highlights: a real WPF+WCF screen-pop demo running three simultaneous
+processes, a real ABP+Hangfire+Redis+SignalR backend, and a real
+end-to-end booking confirmation proxied through to `Lakbay.Booking`'s
+atomic-decrement logic — a fresh slot confirms, an exhausted one
+correctly rejects, both proven live via curl, not just by reading code.
+Local Redis via a portable `redis-server.exe` (no Docker, no admin
+install) and a native Oracle installer prepared but not yet run (needs
+one elevated command — see `Lakbay.AgentOps/README.md`) worked around the
+still-unresolved Docker blocker below entirely for this phase.
+
 **2026-09-07 status check:** all five non-`Lakbay.Booking` repos' work
 described below was confirmed real but had never been committed — now
 committed locally (no push; see 05_DEVLOG.md's 2026-09-07 entry). All
@@ -7,7 +21,7 @@ repos build/test clean without Docker. **Full E2E verification, still
 pending:** Docker Desktop's backend is currently crash-looping on this
 machine on a stuck `sailor-ingest.sock` reparse point unrelated to the
 earlier onboarding issue — needs a machine restart (the same fix that
-cleared the prior Docker blocker) before Cms/Booking/AvailabilityApi's
+cleared the prior Docker blocker) before Cms/AvailabilityApi's
 containers can be brought up again to re-prove the sync pipe live.
 
 **Current phase:** Phase 3 is **functionally complete and verified live**

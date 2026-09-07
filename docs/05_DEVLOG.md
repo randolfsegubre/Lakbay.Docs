@@ -6,6 +6,124 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-08 — Phase 7 (Agent Channel) designed and built: two new repos, real Booking domain code, no Docker needed
+
+**Asked:** close the remaining stack gaps identified against target .NET
+job postings (WPF, Unity IoC, WCF, Oracle, ABP, Hangfire, Redis, SignalR)
+by building one coherent system rather than unrelated tech demos, ideally
+integrated with Lakbay. Chose a call-center agent tool as the unifying
+story: an agent takes a phone call, sees a screen-pop, browses live
+availability, and books a package for the caller.
+
+**Architectural Design Phase first** (ADR-0021 through ADR-0026): two new
+repos (`Lakbay.AgentDesktop`, `Lakbay.AgentOps`), each gap mapped to a
+concrete, non-contrived reason it belongs in this specific system rather
+than bolted on. Notably, ADR-0026 resolved the "how does AgentDesktop
+book anything when Lakbay.Booking's Phase 4 is blocked on a PayMongo
+account that doesn't exist" problem: an agent-assisted channel with
+deferred/invoice payment is a real, distinct product shape (phone
+bookings routinely don't collect payment during the call), so it needed
+no gateway at all — this is what actually let real Booking domain code
+get built this session instead of staying at the Phase 0 `/health` stub
+it had been at since scaffolding.
+
+**Built, in one long session (user's explicit choice over phasing it):**
+
+- **`Lakbay.Booking`** (ADR-0002, ADR-0011, ADR-0026): real CQRS handlers,
+  the atomic-decrement confirm-booking logic, and the `Channel`
+  (Online/Agent) split. `dotnet test` — 9 passed, including concurrency
+  tests proving exactly-one-winner under real simultaneous confirms (2-way
+  and a stronger 10-way variant) against a real disposable LocalDB per
+  test class, not a fake provider. Live curl: a fresh slot confirms with
+  `PendingInvoice`; an exhausted one 409s; the Online channel honestly
+  501s rather than faking a successful charge (ADR-0026 explicitly
+  rejected a fake payment gateway as an option).
+- **`Lakbay.AgentOps`** (ADR-0024, ADR-0025): ABP Framework backend —
+  Redis-cached offer aggregation (real GraphQL client against
+  `Lakbay.AvailabilityApi`'s schema, including the realization mid-build
+  that "Packages" are `Product`s, the only entity `Lakbay.Booking` can
+  actually book — Accommodations/Activities have no bookable id of their
+  own), Hangfire background jobs, a SignalR hub (`AgentAvailabilityHub`),
+  and an Oracle-backed call-log repository framed as integrating with a
+  pre-existing on-prem CRM. A thin plain-MVC adapter controller
+  (`AgentDesktopController`) was added mid-build once a real contract
+  mismatch surfaced between what `Lakbay.AgentOps`'s ABP auto-routes
+  produced and what `Lakbay.AgentDesktop` was already built against —
+  fixed by exposing the exact contract the desktop app expected rather
+  than reworking already-verified client code.
+- **`Lakbay.AgentDesktop`** (ADR-0022, ADR-0023): WPF/MVVM with Unity as
+  the composition root, and a duplex WCF service
+  (`Lakbay.AgentDesktop.TelephonyBridge`) simulating legacy CTI screen-pop
+  — multi-targeted net48 (the host; CoreWCF's NetTcp binding doesn't
+  support duplex contracts yet) and net10.0 (the client side, which
+  modern `System.ServiceModel.NetTcp` fully supports). Built mostly by a
+  background agent that hit a session rate limit mid-work (ViewModels
+  done, Views/composition-root missing) — resumed and finished directly:
+  `App.xaml`/`App.xaml.cs`, `MainWindow`, `BookingConfirmationWindow`,
+  and `MainViewModel` tying the incoming-call, availability, and booking
+  panels together.
+
+**Verified live, not just read as code:**
+- All three `Lakbay.AgentDesktop` processes (TelephonyBridge.Host, the
+  WPF app, the Simulator) running simultaneously: the WPF app subscribed
+  (host log: `Subscribed: session ... (1 active)`), the Simulator
+  triggered a fake call, and the host confirmed the push reached that
+  real subscriber (`SimulateIncomingCall -> pushing to 1 subscriber(s)`).
+- `Lakbay.AgentOps`'s `/api/bookings/confirm` proxying through to a real
+  running `Lakbay.Booking`: a fresh slot (`coron-island-hopping`)
+  confirmed with `200 {"success":true,...,"paymentStatus":"PendingInvoice"}`;
+  the already-exhausted `boracay-getaway` slot (consumed by an earlier
+  Booking-agent test session, proving persistence across restarts too)
+  correctly returned `{"success":false,"message":"This slot is no longer
+  available."}` both times it was tried.
+- `/hangfire` dashboard returns `401` unauthenticated — the auth-gating
+  ADR-0025 requires, confirmed live.
+
+**Real security issues found and fixed mid-build** (per an explicit
+"most secure, no compromise" instruction partway through):
+- Redis: no Docker available, so a portable `redis-server.exe` (the
+  well-known `tporadowski/redis` community build — no official Windows
+  binary exists) was downloaded (SHA256 verified against nothing, since
+  no checksum is published for that repo — noted as a lower-trust source
+  than the others below) and hardened before first run: bound to
+  `127.0.0.1` only, `requirepass` with a generated password stored
+  outside any repo.
+- Oracle: the official installer requires UAC elevation this session
+  never had — confirmed concretely (`Start-Process` returned "requires
+  elevation," `whoami`-equivalent confirmed non-admin) rather than
+  assumed. A `install-oracle-elevated.ps1` script (self-elevating,
+  password pre-generated) was left ready for the user to run once,
+  rather than left as an untested guess.
+- ABP's default `StringEncryption:DefaultPassPhrase` — the same value in
+  every ABP scaffold unless changed — was in `appsettings.json`; moved to
+  `dotnet user-secrets`. Separately, the console test app's
+  `appsettings.json` had ABP's well-known seeded admin password
+  (`admin`/`1q2w3E*`) in plaintext; also moved to user-secrets, with a
+  README note to rotate the seeded account before any real deployment.
+- A transitive high-severity vulnerability
+  (`System.Security.Cryptography.Xml` 8.0.2, pulled in by
+  `System.ServiceModel.Primitives` 8.1.2) was caught via `dotnet build`'s
+  own NU1903 audit warnings across every WCF-referencing project; pinned
+  to a patched 10.0.11 only where actually needed (net48), left to .NET
+  10's shared-framework default elsewhere per NuGet's own pruning
+  warning (NU1510) once that override proved redundant there.
+
+**Not yet done, honestly:** the offer-aggregation endpoint hasn't been
+verified against a *live* `Lakbay.AvailabilityApi` (needs MongoDB/Docker,
+still down this session) — confirmed this is an infrastructure gap, not
+a code bug, by reading the actual `ConnectToTcpHostAsync` exception it
+throws. `Lakbay.AgentDesktop`'s real `AgentOpsHttpClient` isn't yet the
+default Unity registration (still `FakeAgentOpsClient`) - a one-line
+swap once `Lakbay.AgentOps` has a stable place to run continuously. No
+automated tests yet in `Lakbay.AgentOps` or `Lakbay.AgentDesktop`
+(`Lakbay.Booking` has real ones). Everything above is committed locally
+in each repo. `Lakbay.AgentOps` and `Lakbay.AgentDesktop` are brand-new
+local repos with no GitHub remote yet (unlike the other six, which
+already have one) — creating those remotes is a separate, explicit
+decision, not assumed here.
+
+---
+
 ## 2026-09-07 — Portfolio dev-completion pass: secret found and fixed, builds re-verified, new Docker blocker hit
 
 **Asked:** as part of a wider pass bringing several personal-project
