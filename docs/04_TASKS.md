@@ -1,5 +1,15 @@
 # Tasks — Current Status
 
+**2026-09-07 status check:** all five non-`Lakbay.Booking` repos' work
+described below was confirmed real but had never been committed — now
+committed locally (no push; see 05_DEVLOG.md's 2026-09-07 entry). All
+repos build/test clean without Docker. **Full E2E verification, still
+pending:** Docker Desktop's backend is currently crash-looping on this
+machine on a stuck `sailor-ingest.sock` reparse point unrelated to the
+earlier onboarding issue — needs a machine restart (the same fix that
+cleared the prior Docker blocker) before Cms/Booking/AvailabilityApi's
+containers can be brought up again to re-prove the sync pipe live.
+
 **Current phase:** Phase 3 is **functionally complete and verified live**
 — both trees. Products-tree sync (`Lakbay.Cms` → `Lakbay.AvailabilityApi`,
 ADR-0013/0014) is proven end-to-end, `Lakbay.Cms` is the sole source of

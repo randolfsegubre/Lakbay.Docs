@@ -6,6 +6,68 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-07 — Portfolio dev-completion pass: secret found and fixed, builds re-verified, new Docker blocker hit
+
+**Asked:** as part of a wider pass bringing several personal-project
+portfolios to "dev complete, verified E2E locally" for job applications,
+verify Lakbay's actual current state and close small gaps — not re-derive
+architecture, just confirm what's real.
+
+**What was found:** all five application repos except `Lakbay.Booking` had
+substantial uncommitted work sitting in their working trees — everything
+`04_TASKS.md`/this devlog's entries (7) through (14) already describe (the
+full Phase 3 sync pipeline, Country/Region/Accommodation hierarchy, Room
+Types, Stays search, Activities marketplace) was real and present on disk,
+just never committed. Confirmed with the user before touching git state;
+committed all five repos' working trees locally (no push) so this work is
+no longer at risk of loss.
+
+**A real secret was caught before it went further:** `Lakbay.Cms`'s
+`appsettings.json` had a live Umbraco Imaging `HMACSecretKey` value
+committed in the very commit just being made. Cleared it back to an empty
+string and moved the real value to `dotnet user-secrets` instead (the
+project already had a `UserSecretsId` provisioned, it just wasn't being
+used for this key) — fixed by amending that one still-local, unpushed
+commit, not by adding a follow-up "oops" commit.
+
+**Build/test verification (no Docker needed):** `Lakbay.Contracts` (both
+C# and — implicitly, via the committed `generated/types.ts` — TypeScript
+sides), `Lakbay.Booking` (`dotnet test` — 1 passed), and
+`Lakbay.AvailabilityApi` all build clean. `Lakbay.Cms` builds with only 3
+pre-existing nullable-reference warnings. `Lakbay.Web` builds and lints
+clean (`npm run build` — all 9 routes compiled, including the new
+`/stays` and `/activities` pages).
+
+**New Docker blocker, different from the onboarding one this devlog's
+earlier "Docker unblocked by machine restart" entry describes:** Docker
+Desktop's backend now crashes ~10-15 seconds after every launch with
+`starting services: initializing Ingest server: ... rename
+.../run/sailor-ingest.sock .../run/sailor-ingest.sock.stale: The file
+cannot be accessed by the system.` Both the live and `.stale` socket files
+are orphaned NTFS reparse points that resist deletion via `Remove-Item`,
+`cmd /c del`, and `fsutil reparsepoint delete` alike (all three report the
+same "cannot be accessed by the system" error) — consistent with a handle
+orphaned by an earlier unclean shutdown. Given this exact class of Docker
+Desktop startup failure was fixed by a plain machine restart last time
+(see the entry below, "Docker unblocked by machine restart"), that's the
+likely fix again, but restarting the machine wasn't done unilaterally in
+an active session — left for the user to do when convenient, then resume
+from "Full E2E verification, still pending" in `04_TASKS.md`.
+
+**Not touched:** no application code changed, no ADRs added — this was a
+verification/hygiene pass, not new feature work. `Lakbay.AvailabilityApi.Tests`
+couldn't be run (needs Docker for its Testcontainers-backed MongoDB
+fixture) — expected to pass per the existing devlog record of 8/8 green,
+not verified fresh this session.
+
+**Next:** once Docker is confirmed working again (`docker ps` returns a
+table), follow `07_MANUAL_SETUP_GUIDE.md` §4-7 top to bottom in one sitting
+to re-prove the full Cms -> Service Bus -> Sync -> MongoDB ->
+AvailabilityApi -> Web pipe live, the way session (5)/(7) originally did —
+that's the one thing this session couldn't re-verify.
+
+---
+
 ## 2026-09-06 (15) — Competitive landscape research added to the Blueprint
 
 **Asked:** whether any website is similar to Lakbay, why the platform is
