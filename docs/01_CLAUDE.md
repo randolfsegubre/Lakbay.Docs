@@ -1,8 +1,9 @@
 # Lakbay — Platform AI Operating Manual
 
 This file is the source of truth for any AI coding assistant (Claude Code,
-or any other LLM) working anywhere in the Lakbay estate — all six repos
-under `Personal_Projects/Lakbay/`. Read it before writing code in any of
+or any other LLM) working anywhere in the Lakbay estate — all eight repos
+under `Personal_Projects/Lakbay/` (six original plus `Lakbay.AgentDesktop`/
+`Lakbay.AgentOps`, ADR-0021). Read it before writing code in any of
 them. It supersedes generic defaults — where it's specific, follow it over
 a more "standard" pattern you might otherwise reach for.
 
@@ -84,6 +85,8 @@ and ADR-0020 for the full research and design record.
 | `Lakbay.Booking` | Orders, basket, availability calendar, payment orchestration — deliberately separate from the CMS | .NET minimal API |
 | `Lakbay.Web` | Public storefront: marketing pages, catalog browsing, booking flow | Next.js, Redux Toolkit + RTK Query |
 | `Lakbay.AvailabilityApi` | Real, permanently deployed product-search service — denormalized read model synced from `Lakbay.Cms`, modeled on Hotelplan's `api-sphinx`/Manticore. **Not a mock** (renamed from `Lakbay.MockApi`) | ASP.NET Core, HotChocolate, MongoDB.Driver |
+| `Lakbay.AgentDesktop` | Call-center agent tool: caller screen-pop, live availability browse, direct phone booking (ADR-0021/0022/0023) | WPF/MVVM, Unity Container, WCF (`TelephonyBridge`) |
+| `Lakbay.AgentOps` | Backend for the agent channel: sessions, call logging, cached agent-shaped catalog aggregation, live availability push (ADR-0025) | ABP Framework, Hangfire, Redis, SignalR, Oracle (call log) + SQL Server |
 | `Lakbay.Contracts` | Shared GraphQL SDL schema + generated TS/C# types, versioned as a package | Schema + codegen |
 
 ## 3. The load-bearing architecture decisions
@@ -218,10 +221,11 @@ own `CLAUDE.md`.
 - Exact GraphQL-on-Umbraco package for `Lakbay.Cms` (community package vs.
   a hand-rolled resolver layer over the Content Delivery API) — needs a
   short spike before `Lakbay.Contracts` schema v0 is treated as locked.
-- No GitHub remotes exist yet for any of the six repos — local-only as of
-  the Phase 0 scaffolding session (2026-09-03). Creating remotes is a
-  separate, explicit decision (see [[working-style]] on GitHub token
-  scope) — don't assume it's wanted without asking.
+- GitHub remotes now exist for all six original repos (confirmed
+  2026-09-07 — this line previously said "no remotes exist yet," which had
+  gone stale since the 2026-09-03 Phase 0 note above without anyone
+  updating it). `Lakbay.AgentDesktop`/`Lakbay.AgentOps` need their own
+  remotes created when they're scaffolded (ADR-0021).
 - Business model: proprietary tour operator vs. later opening to
   third-party listings (marketplace/OTA) — different unit economics,
   deliberately left open.

@@ -43,6 +43,7 @@ documented along the way. If the two ever conflict, `01_CLAUDE.md` wins on
 | 4 | Booking & payments | Booking | 0, 3 | End-to-end bookable holiday in staging, PayMongo sandbox integration |
 | 5 | Hosting & go-live | Cms, Booking, Web, AvailabilityApi | 1–4 | Live Philippines-first site, real destination content, IaC-provisioned Azure — all four services deployed |
 | 6 | Scale readiness | all | 5 | AKS/Stripe/Azure AI Search evaluated against real traffic, not assumed |
+| 7 | Agent Channel | AgentDesktop, AgentOps, Booking (new), AvailabilityApi | 0, 1 | Call-center agent tool: WPF+Unity desktop, WCF CTI screen-pop simulation, ABP/Hangfire/Redis/SignalR backend, real Booking domain code via a deferred-payment agent channel — independent of PayMongo |
 
 ## Phase 0 — Foundation & scaffolding
 
@@ -297,3 +298,37 @@ technology-stack table against real traffic data, not assumption.
 **Exit criteria:** each revisited item gets its own ADR recording the
 decision made with real data, superseding (not silently replacing) the
 original Blueprint verdict.
+
+## Phase 7 — Agent Channel
+
+**Goal:** a call-center agent can look up an incoming caller, browse live
+availability, and book the customer directly over the phone, end to end.
+
+**Repos:** `Lakbay.AgentDesktop` (new), `Lakbay.AgentOps` (new),
+`Lakbay.Booking` (new `Agent` channel, ADR-0026), `Lakbay.AvailabilityApi`
+(read-only consumer, no changes needed), `Lakbay.Docs`.
+
+- `Lakbay.AgentDesktop`: WPF/MVVM, Unity composition root (ADR-0022);
+  `Lakbay.AgentDesktop.TelephonyBridge`, a WCF duplex service simulating
+  CTI screen-pop (ADR-0023).
+- `Lakbay.AgentOps`: ABP Framework backend (ADR-0025) — agent sessions,
+  call logging to Oracle (ADR-0024), Hangfire background jobs, Redis
+  caching of the agent-shaped "offer" aggregation, a SignalR hub pushing
+  live availability to connected desktop clients.
+- `Lakbay.Booking` gains a `Channel` (`Online`/`Agent`) on the booking
+  aggregate; `Agent`-channel bookings use `PaymentStatus = PendingInvoice`
+  instead of a payment-gateway call (ADR-0026) — this is what makes real
+  Booking domain code buildable now, independent of the still-blocked
+  PayMongo sandbox account.
+- The atomic availability decrement (ADR-0011) applies identically to
+  both channels — no channel-specific exception to the concurrency
+  guarantee.
+
+**Exit criteria:** a simulated incoming call in `Lakbay.AgentDesktop`
+triggers a screen-pop via the WCF bridge; the agent browses live
+availability (served through `Lakbay.AgentOps`, cached in Redis, kept
+current via the SignalR hub); the agent confirms a booking that
+correctly decrements availability (verified with the same concurrency
+test shape as ADR-0011) and lands in `PendingInvoice` status; a Hangfire
+job records the call in Oracle and queues a follow-up payment-collection
+message. None of this depends on PayMongo existing.
