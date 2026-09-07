@@ -36,7 +36,7 @@ flowchart TB
     Web -- "catalog / search queries" --> Search
     Web -- "checkout mutations" --> Booking
     Web -. "optional: single-page content\n(ADR-0007)" .-> Cms
-    Cms -- "publish → sync" --> Search
+    Cms -- "publish → Service Bus\n(ADR-0013)" --> Search
     Booking -- "AvailabilityChanged\n(Service Bus, ADR-0008)" --> Search
     Booking <-- "Service Bus events\nBookingConfirmed" --> Cms
     Search -- "live push\n(Azure SignalR, ADR-0008)" --> Web
@@ -119,7 +119,7 @@ these are kept as two separate concerns.
 | **Stack** | Umbraco 18 on .NET |
 | **Exposes** | Umbraco Content Delivery API + a GraphQL layer matching `Lakbay.Contracts` |
 | **Consumes** | Nothing from the other services at runtime — it's the source of truth, not a consumer |
-| **Publishes** | A sync signal (mechanism TBD — Phase 1/3 decision) on every content/product publish, consumed by `Lakbay.AvailabilityApi`; Service Bus events consumed by `Lakbay.Booking` where availability affects catalog display |
+| **Publishes** | A `CatalogSyncEvent` to Azure Service Bus (`lakbay-catalog-sync` queue, ADR-0013) on every Products-tree publish, consumed by `Lakbay.AvailabilityApi.Sync`; Service Bus events consumed by `Lakbay.Booking` where availability affects catalog display |
 
 Internal shape: business rules that govern *what a valid product record
 is* (required fields, price-band consistency, itinerary validation) live
@@ -234,6 +234,11 @@ table for the full per-service Azure verdicts.
 - **This file** — what each piece is and how they connect, structurally.
 - **`03_ARCHITECTURE_AND_PATTERNS_GUIDE.md`** — internal code-level
   patterns (OOP/SOLID/design patterns) each repo follows.
+- **`08_LOCAL_INFRASTRUCTURE.md`** — the same connections above, but from
+  "what's actually running in Docker on my machine" instead of the
+  conceptual/deployment view.
+- **`09_FEATURE_MAP.md`** — a fast index from a feature or bug report
+  straight to the file/class responsible, across all repos.
 - **`docs/adr/`** — why each structural seam is where it is, with
   alternatives considered.
 - **The Lakbay System Map artifact** — the visual version of the read/write

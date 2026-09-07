@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lakbay Developer Atlas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  /* Deliberately single-theme (dark) — this page commits to one visual
+     world rather than switching with the viewer's OS/browser preference,
+     so it always matches regardless of where it's opened. */
+  :root{
+    --bg:#121b1a;
+    --surface:#182322;
+    --surface-muted:#1e2b29;
+    --surface-sunken:#101817;
+    --border:#2c3937;
+    --border-strong:#3c4c49;
+    --text:#eef0ea;
+    --text-soft:#b8beb4;
+    --text-faint:#7d8983;
+    --accent:#5cbab2;
+    --accent-ink:#bfe9e3;
+    --accent-soft:#1f3532;
+    --amihan:#71c497;
+    --parul:#d99a3e;
+    --pamana:#c08a52;
+    --danger:#e08278;
+    --danger-soft:#3a2320;
+    --ok-soft:#1d3327;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -10px rgba(0,0,0,.5);
+    --radius: 10px;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --display: 'Fraunces', ui-serif, Georgia, serif;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:15px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--accent-soft); color:var(--accent-ink); }
+
+  h1,h2,h3,h4{ font-family:var(--display); font-weight:600; text-wrap:balance; color:var(--text); margin:0; }
+  p{ margin:0; }
+  code, .mono{ font-family:var(--mono); }
+  a{ color:var(--accent-ink); text-decoration-color:var(--border-strong); text-underline-offset:2px; }
+  a:hover{ text-decoration-color:var(--accent); }
+  button{ font-family:inherit; }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--accent-ink);
+  }
+
+  /* ---------- shell ---------- */
+  .shell{ display:grid; grid-template-columns:272px 1fr; min-height:100vh; }
+  @media (max-width:920px){ .shell{ grid-template-columns:1fr; } }
+
+  .topbar{
+    grid-column:1/-1;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:16px 28px;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .brand .mark{
+    font-family:var(--display); font-weight:700; font-size:20px; color:var(--accent-ink);
+    letter-spacing:.01em;
+  }
+  .brand .tag{ color:var(--text-faint); font-size:12.5px; font-family:var(--mono); }
+  .status-pill{
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--border-strong); background:var(--surface-muted);
+    color:var(--text-soft); font-family:var(--mono); font-size:11.5px;
+    padding:5px 10px; border-radius:999px; white-space:nowrap;
+  }
+  .status-pill .dot{ width:7px; height:7px; border-radius:50%; background:var(--amihan); }
+
+  /* ---------- sidebar ---------- */
+  .sidebar{
+    border-right:1px solid var(--border);
+    background:var(--surface);
+    padding:20px 16px 40px;
+    position:sticky; top:0; align-self:start;
+    height:100vh; overflow-y:auto;
+  }
+  @media (max-width:920px){ .sidebar{ position:static; height:auto; border-right:none; border-bottom:1px solid var(--border);} }
+
+  .search-wrap{ position:relative; margin-bottom:18px; }
+  .search-wrap input{
+    width:100%; padding:9px 12px 9px 32px; border-radius:8px;
+    border:1px solid var(--border-strong); background:var(--surface-sunken);
+    color:var(--text); font-family:var(--sans); font-size:13px;
+  }
+  .search-wrap input::placeholder{ color:var(--text-faint); }
+  .search-wrap svg{ position:absolute; left:9px; top:50%; transform:translateY(-50%); opacity:.55; }
+  .search-hint{ font-size:11px; color:var(--text-faint); margin-top:6px; padding:0 2px; }
+
+  nav.toc{ display:flex; flex-direction:column; gap:2px; }
+  nav.toc .group-label{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-faint); margin:16px 0 6px 10px;
+  }
+  nav.toc .group-label:first-child{ margin-top:2px; }
+  nav.toc a{
+    display:flex; align-items:center; gap:8px;
+    padding:7px 10px; border-radius:7px; color:var(--text-soft);
+    font-size:13.5px; text-decoration:none; border:1px solid transparent;
+  }
+  nav.toc a:hover{ background:var(--surface-muted); color:var(--text); }
+  nav.toc a.active{ background:var(--accent-soft); color:var(--accent-ink); font-weight:600; border-color:var(--border); }
+  nav.toc a .n{ font-family:var(--mono); font-size:10.5px; color:var(--text-faint); min-width:16px; }
+  nav.toc a.active .n{ color:var(--accent-ink); }
+  nav.toc a[data-hidden="1"]{ display:none; }
+
+  /* ---------- main ---------- */
+  main{ padding:44px 40px 120px; max-width:980px; }
+  @media (max-width:640px){ main{ padding:28px 18px 90px; } }
+
+  section{ margin-bottom:76px; scroll-margin-top:24px; }
+  section .section-head{ margin-bottom:22px; max-width:66ch; }
+  section h2{ font-size:30px; margin-top:6px; }
+  section .lede{ color:var(--text-soft); font-size:15.5px; margin-top:10px; max-width:62ch; }
+  .prose{ max-width:68ch; }
+  .prose p + p, .prose ul + p, .prose p + ul{ margin-top:14px; }
+  .prose ul{ margin:0; padding-left:20px; }
+  .prose li + li{ margin-top:6px; }
+  .prose h4{ font-size:16px; margin:22px 0 8px; color:var(--text); }
+  .prose strong{ color:var(--text); }
+
+  /* ---------- cards / grids ---------- */
+  .grid{ display:grid; gap:16px; }
+  .grid.cols-2{ grid-template-columns:repeat(2,1fr); }
+  .grid.cols-3{ grid-template-columns:repeat(3,1fr); }
+  @media (max-width:760px){ .grid.cols-2, .grid.cols-3{ grid-template-columns:1fr; } }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px 20px; box-shadow:var(--shadow);
+  }
+  .card h3{ font-size:16.5px; display:flex; align-items:center; gap:8px; }
+  .card .desc{ color:var(--text-soft); font-size:13.5px; margin-top:8px; }
+  .card .kv{ margin-top:14px; display:flex; flex-direction:column; gap:7px; }
+  .card .kv .row{ display:grid; grid-template-columns:86px 1fr; gap:10px; font-size:12.5px; }
+  .card .kv .row dt{ color:var(--text-faint); font-family:var(--mono); }
+  .card .kv .row dd{ margin:0; color:var(--text-soft); }
+
+  .repo-chip{
+    display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11.5px;
+    border:1px solid var(--border-strong); background:var(--surface-muted); color:var(--text-soft);
+    padding:2px 8px; border-radius:6px; white-space:nowrap;
+  }
+
+  /* product line swatches */
+  .lines{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:18px; }
+  @media (max-width:700px){ .lines{ grid-template-columns:repeat(2,1fr); } }
+  .line-card{ border-radius:var(--radius); padding:16px; color:#fff; box-shadow:var(--shadow); position:relative; overflow:hidden; }
+  .line-card .glyph{ font-size:22px; opacity:.9; }
+  .line-card h4{ color:#fff; font-size:16px; margin-top:8px; }
+  .line-card p{ font-size:12px; margin-top:5px; opacity:.92; line-height:1.5; }
+  .line-alon{ background:linear-gradient(155deg,#1f6f72,#164f52); }
+  .line-amihan{ background:linear-gradient(155deg,#3a7d5c,#295942); }
+  .line-parul{ background:linear-gradient(155deg,#b9770e,#8c5a0a); }
+  .line-pamana{ background:linear-gradient(155deg,#7a4e07,#573705); }
+
+  /* ---------- infra cards ---------- */
+  .infra-card{ border-left:3px solid var(--accent); }
+  .infra-card.sqledge{ border-left-color:var(--border-strong); }
+  .port-tag{
+    font-family:var(--mono); font-size:11px; background:var(--surface-sunken);
+    border:1px solid var(--border); border-radius:5px; padding:1px 6px; color:var(--text-soft);
+  }
+
+  /* ---------- code blocks ---------- */
+  pre.code{
+    background:var(--surface-sunken); border:1px solid var(--border);
+    border-radius:8px; padding:14px 16px; overflow-x:auto;
+    font-family:var(--mono); font-size:12.5px; line-height:1.65; color:var(--text);
+  }
+  pre.code .c{ color:var(--text-faint); }
+  code.inline{
+    background:var(--surface-muted); border:1px solid var(--border); border-radius:4px;
+    padding:1px 5px; font-size:12.5px; overflow-wrap:anywhere;
+  }
+
+  /* ---------- walkthrough steps ---------- */
+  .steps{ counter-reset:step; display:flex; flex-direction:column; gap:0; }
+  .step{ display:grid; grid-template-columns:40px 1fr; gap:16px; position:relative; padding-bottom:28px; }
+  .step:last-child{ padding-bottom:0; }
+  .step::before{
+    counter-increment:step; content:counter(step);
+    width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:600; font-size:13px;
+    z-index:1;
+  }
+  .step::after{
+    content:''; position:absolute; left:15px; top:34px; bottom:-2px; width:2px; background:var(--border);
+  }
+  .step:last-child::after{ display:none; }
+  .step .step-body{ padding-top:4px; }
+  .step h4{ font-size:15.5px; margin-bottom:6px; }
+  .step .step-body p{ color:var(--text-soft); font-size:13.5px; margin-bottom:10px; }
+  .callout{
+    border:1px solid var(--border-strong); background:var(--surface-muted); border-radius:8px;
+    padding:10px 14px; font-size:12.5px; color:var(--text-soft); margin-top:10px;
+  }
+  .callout.warn{ border-color:#d8b98a; background:var(--danger-soft); color:var(--text); }
+  .callout strong{ color:var(--text); }
+
+  /* ---------- tables ---------- */
+  .table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+  /* table-layout:fixed makes columns strictly honor the <th style="width:%">
+     hints instead of the browser's content-based auto-sizing — the auto
+     algorithm let a long unbroken token (a file path, a camelCase
+     identifier) push a column wider than its share, skewing row layout
+     into what read as overlapping text. overflow-wrap on every text-bearing
+     cell/element below is the other half of the fix: it's what actually
+     lets that long token wrap instead of overflowing once the column can
+     no longer grow to fit it. */
+  table{ width:100%; border-collapse:collapse; font-size:12.8px; min-width:640px; table-layout:fixed; }
+  thead th{
+    text-align:left; font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-faint); background:var(--surface-muted); padding:10px 14px; border-bottom:1px solid var(--border);
+    overflow-wrap:anywhere;
+  }
+  tbody td{ padding:11px 14px; border-bottom:1px solid var(--border); vertical-align:top; color:var(--text-soft); overflow-wrap:anywhere; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface-muted); }
+  tbody tr[data-hidden="1"]{ display:none; }
+  td.feat{ color:var(--text); font-weight:500; }
+  td .file{ font-family:var(--mono); font-size:12px; color:var(--accent-ink); display:block; overflow-wrap:anywhere; }
+  td .fn{ font-family:var(--mono); font-size:11.5px; color:var(--text-faint); display:block; margin-top:2px; overflow-wrap:anywhere; }
+
+  .filter-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .filter-row .count{ font-family:var(--mono); font-size:11.5px; color:var(--text-faint); }
+  .table-search{
+    padding:8px 12px; border-radius:7px; border:1px solid var(--border-strong); background:var(--surface);
+    font-family:var(--sans); font-size:13px; color:var(--text); min-width:220px;
+  }
+
+  /* ---------- ADR list ---------- */
+  .adr-list{ display:flex; flex-direction:column; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--surface); }
+  .adr-row{ display:grid; grid-template-columns:56px 1fr auto; gap:14px; align-items:start; padding:13px 16px; border-bottom:1px solid var(--border); }
+  .adr-row:last-child{ border-bottom:none; }
+  .adr-row .num{ font-family:var(--mono); color:var(--text-faint); font-size:12.5px; padding-top:2px; }
+  .adr-row .title{ font-weight:600; font-size:13.5px; }
+  .adr-row .summary{ color:var(--text-soft); font-size:12.5px; margin-top:3px; }
+  .adr-row .repos{ display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; max-width:180px; }
+  .adr-row[data-hidden="1"]{ display:none; }
+
+  /* mermaid container */
+  .diagram-wrap{ border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); padding:18px; overflow-x:auto; box-shadow:var(--shadow); }
+  .diagram-caption{ font-size:12px; color:var(--text-faint); margin-top:10px; text-align:center; }
+
+  /* journey */
+  .journey{ display:flex; flex-direction:column; gap:0; margin-top:18px; }
+  .journey .beat{ display:grid; grid-template-columns:120px 1fr; gap:16px; padding:14px 0; border-bottom:1px dashed var(--border); }
+  .journey .beat:last-child{ border-bottom:none; }
+  .journey .who{ font-family:var(--mono); font-size:11px; color:var(--text-faint); letter-spacing:.04em; text-transform:uppercase; padding-top:2px; }
+  .journey .what strong{ display:block; font-size:14px; margin-bottom:4px; }
+  .journey .what p{ font-size:13px; color:var(--text-soft); }
+
+  .sev{ font-family:var(--mono); font-size:10.5px; padding:2px 7px; border-radius:5px; font-weight:600; }
+  .sev.common{ background:var(--danger-soft); color:var(--danger); }
+  .sev.env{ background:var(--ok-soft); color:var(--amihan); }
+
+  footer{ margin-top:60px; padding-top:24px; border-top:1px solid var(--border); color:var(--text-faint); font-size:12px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark">Lakbay Developer Atlas</span>
+      <span class="tag">six repos · one platform</span>
+    </div>
+    <span class="status-pill"><span class="dot"></span>Phase 3 complete · 14 products live</span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="globalSearch" type="text" placeholder="Search features, files, symptoms…" autocomplete="off">
+    </div>
+    <div class="search-hint" id="searchHint">Filters the feature map, ADRs &amp; troubleshooting tables below</div>
+
+    <nav class="toc" id="toc">
+      <div class="group-label">Orientation</div>
+      <a href="#overview" data-title="overview what is lakbay six repos"><span class="n">01</span>Overview</a>
+      <a href="#architecture" data-title="architecture cqrs read write split"><span class="n">02</span>Architecture</a>
+      <a href="#journey" data-title="user journey data flow sync pipeline sequence"><span class="n">03</span>Data flow &amp; user journey</a>
+
+      <div class="group-label">Running it locally</div>
+      <a href="#infrastructure" data-title="docker containers infrastructure sql server mongo service bus"><span class="n">04</span>Local infrastructure</a>
+      <a href="#setup" data-title="setup walkthrough install guide prerequisites"><span class="n">05</span>Setup walkthrough</a>
+      <a href="#troubleshooting" data-title="troubleshooting bugs symptoms fix"><span class="n">06</span>Troubleshooting</a>
+
+      <div class="group-label">Finding your way</div>
+      <a href="#feature-map" data-title="feature map where is the code file function class"><span class="n">07</span>Feature map</a>
+      <a href="#adrs" data-title="architecture decision records adr"><span class="n">08</span>Decision records</a>
+      <a href="#agents" data-title="ai agents claude code onboarding"><span class="n">09</span>For AI agents</a>
+    </nav>
+  </aside>
+
+  <main>
+
+    <!-- ============ 01 OVERVIEW ============ -->
+    <section id="overview">
+      <div class="section-head">
+        <span class="eyebrow">01 — Orientation</span>
+        <h2>What Lakbay is</h2>
+        <p class="lede">A Philippines-first holiday-booking platform, architected as six repos instead of one monolith — each repo does exactly one job, and nothing reaches into another repo's database.</p>
+      </div>
+
+      <div class="prose">
+        <p>Lakbay sells curated Philippine holidays across four themed collections — Philippines-only by deliberate choice, not by naming accident: "Lakbay" means "journey" in Filipino, so the brand doesn't foreclose a future non-PH destination if that's ever revisited. The platform is modeled on a real enterprise pattern (Hotelplan's ECMS/PCMS/Sphinx-API estate) but re-architected for a small team: content is <strong>authored</strong> in one place, <strong>searched</strong> through a purpose-built read model, <strong>transacted</strong> in an isolated booking service, and <strong>presented</strong> by a single headless frontend.</p>
+      </div>
+
+      <h4 style="margin-top:32px;">The four product lines</h4>
+      <p style="color:var(--text-soft); font-size:13.5px; margin-top:4px;">English display names as of 2026-09-08 — GraphQL enum codes (ALON/AMIHAN/PARUL/PAMANA) stayed unchanged as the stable identifier. 14 real products across the four lines today.</p>
+      <div class="lines">
+        <div class="line-card line-alon"><span class="glyph">🌊</span><h4>Islands</h4><p>Islands &amp; water adventure — Coron, El Nido, Boracay, Siargao, La Union</p></div>
+        <div class="line-card line-amihan"><span class="glyph">🌲</span><h4>Highlands</h4><p>Highlands &amp; cool-climate escapes — Baguio, Sagada, Tagaytay</p></div>
+        <div class="line-card line-parul"><span class="glyph">🏮</span><h4>Festivals</h4><p>Festive &amp; light tourism — San Fernando Pampanga, Cebu (Sinulog), Iloilo (Dinagyang)</p></div>
+        <div class="line-card line-pamana"><span class="glyph">🏛️</span><h4>Heritage</h4><p>Heritage &amp; culture — Vigan, Banaue, Intramuros</p></div>
+      </div>
+
+      <h4 style="margin-top:36px;">The six repos</h4>
+      <div class="grid cols-3" style="margin-top:14px;">
+        <div class="card"><h3>📖 Lakbay.Docs</h3><p class="desc">Platform plan, ADRs, devlog. No runtime role — this is the "why" for everything else.</p></div>
+        <div class="card"><h3>🧩 Lakbay.Contracts</h3><p class="desc">The shared GraphQL SDL schema, plus generated C#/TS types. Never a running service.</p></div>
+        <div class="card"><h3>✏️ Lakbay.Cms</h3><p class="desc">Umbraco 18 — content + product catalog authoring. The source of truth.</p></div>
+        <div class="card"><h3>🔎 Lakbay.AvailabilityApi</h3><p class="desc">HotChocolate + MongoDB. Denormalized, faceted read model — what the storefront actually queries.</p></div>
+        <div class="card"><h3>🧾 Lakbay.Booking</h3><p class="desc">Orders, basket, availability, payment — deliberately isolated (Phase 4, not started).</p></div>
+        <div class="card"><h3>🖥️ Lakbay.Web</h3><p class="desc">Next.js + Redux Toolkit + RTK Query. Owns 100% of presentation, headless throughout.</p></div>
+      </div>
+
+      <div class="callout" style="margin-top:24px;"><strong>Where things stand:</strong> Phases 0–3 are complete and verified live, both trees (Products + Content). The catalog carries real accommodation and included/optional-activities data per product (ADR-0016, matching how Inghams/Inntravel/Santa's Lapland actually sell a holiday) across 14 real Philippine destinations. Phase 4 (real checkout) is blocked on a PayMongo sandbox account. See <span class="repo-chip">04_TASKS.md</span> in Lakbay.Docs for the live checklist.</div>
+    </section>
+
+    <!-- ============ 02 ARCHITECTURE ============ -->
+    <section id="architecture">
+      <div class="section-head">
+        <span class="eyebrow">02 — Orientation</span>
+        <h2>Architecture: CQRS at platform scale</h2>
+        <p class="lede">Not one decision but the same pattern applied twice — once across the whole platform, once again inside Lakbay.Booking.</p>
+      </div>
+
+      <div class="diagram-wrap">
+        <pre class="mermaid">
+flowchart TB
+    Web["Lakbay.Web<br/>Next.js + Redux Toolkit + RTK Query"]
+
+    subgraph Read["Read side — search / browse"]
+        Search["Lakbay.AvailabilityApi<br/>HotChocolate + MongoDB<br/>denormalized, facet-indexed"]
+    end
+
+    subgraph Write["Write side — authoring and transactions"]
+        Cms["Lakbay.Cms<br/>Umbraco 18 — content + catalog"]
+        Booking["Lakbay.Booking<br/>.NET CQRS — orders / availability"]
+    end
+
+    Contracts["Lakbay.Contracts<br/>shared GraphQL schema"]
+
+    Web -- "catalog / search queries" --> Search
+    Web -- "checkout mutations (Phase 4)" --> Booking
+    Cms -- "publish to Service Bus (ADR-0013)" --> Search
+    Booking -- "AvailabilityChanged (ADR-0008)" --> Search
+    Search -- "live push, SignalR (ADR-0008)" --> Web
+    Cms -.implements.-> Contracts
+    Search -.implements.-> Contracts
+    Booking -.implements.-> Contracts
+        </pre>
+        <div class="diagram-caption">Read and write sides never touch the same database — sync happens over events, not shared storage.</div>
+      </div>
+
+      <div class="prose" style="margin-top:26px;">
+        <p><strong>Why this shape, not a monolith:</strong></p>
+        <ul>
+          <li><strong>Read-heavy publishing vs. write-heavy transactions</strong> have different performance profiles — Umbraco's cache is built for read-heavy publish-then-cache workloads; basket writes are the opposite. Mixing them risks lock contention at checkout, the worst possible moment.</li>
+          <li><strong>General content indexing and faceted product search are different tools</strong> — a dedicated search service (modeled on Hotelplan's Manticore-backed Sphinx-API) handles filtered search precisely because a CMS's own index isn't built for it at scale.</li>
+          <li><strong>A frontend coupled to a CMS's render pipeline can't be built or tested independently</strong> — headless-everything plus one shared contract means Lakbay.Web runs, builds, and demos against Lakbay.AvailabilityApi alone, no other service required.</li>
+        </ul>
+      </div>
+
+      <h4 style="margin-top:34px;">Per-repo shape</h4>
+      <div class="grid cols-2" style="margin-top:14px;">
+        <div class="card">
+          <h3>✏️ Lakbay.Cms</h3>
+          <div class="kv">
+            <div class="row"><dt>Owns</dt><dd>Editorial content, the product catalog</dd></div>
+            <div class="row"><dt>Not</dt><dd>Orders, availability, page rendering</dd></div>
+            <div class="row"><dt>Publishes</dt><dd>CatalogSyncEvent → Service Bus (ADR-0013)</dd></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>🔎 Lakbay.AvailabilityApi</h3>
+          <div class="kv">
+            <div class="row"><dt>Owns</dt><dd>Denormalized, facet-indexed MongoDB copy</dd></div>
+            <div class="row"><dt>Not</dt><dd>Authoring — pure consumer of sync data</dd></div>
+            <div class="row"><dt>Shape</dt><dd>2 deployables, 1 repo (ADR-0009): query API never touches Service Bus, Sync function never serves queries</dd></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>🧾 Lakbay.Booking</h3>
+          <div class="kv">
+            <div class="row"><dt>Owns</dt><dd>Orders, basket, availability calendar</dd></div>
+            <div class="row"><dt>Not</dt><dd>Its own copy of catalog/content data</dd></div>
+            <div class="row"><dt>Guards</dt><dd>Atomic conditional SQL UPDATE prevents double-booking (ADR-0011) — independent of sync speed</dd></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>🖥️ Lakbay.Web</h3>
+          <div class="kv">
+            <div class="row"><dt>Owns</dt><dd>Every pixel — layout, routing, SEO</dd></div>
+            <div class="row"><dt>Not</dt><dd>Any database, any direct data access</dd></div>
+            <div class="row"><dt>Shape</dt><dd>RTK Query per backend; plain Redux only for genuinely client-side state</dd></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 03 DATA FLOW / USER JOURNEY ============ -->
+    <section id="journey">
+      <div class="section-head">
+        <span class="eyebrow">03 — Orientation</span>
+        <h2>Data flow &amp; user journey</h2>
+        <p class="lede">Two journeys worth holding in your head: what a shopper does, and what an edit does.</p>
+      </div>
+
+      <h4>A shopper's path through Lakbay.Web</h4>
+      <div class="journey">
+        <div class="beat"><div class="who">Homepage</div><div class="what"><strong>/</strong><p>Four product-line cards, driven entirely by <code class="inline">useGetProductLinesQuery</code> — no hard-coded lines. Adding a 5th line to the schema needs zero frontend code changes.</p></div></div>
+        <div class="beat"><div class="who">Collection</div><div class="what"><strong>/collections/[code]</strong><p>Products in one line via <code class="inline">useGetProductsQuery({ productLine })</code> — real photos, price-from, duration, sold-out state.</p></div></div>
+        <div class="beat"><div class="who">Detail</div><div class="what"><strong>/holidays/[slug]</strong><p>Full itinerary, board basis, price bands, hero image, a named accommodation card, and included-vs-optional activity lists (ADR-0016). "Book this holiday" is an honestly-disabled button — Phase 4 isn't built, so it doesn't pretend to be.</p></div></div>
+        <div class="beat"><div class="who">Phase 4</div><div class="what"><strong>Checkout →</strong><p>Not built. Will call Lakbay.Booking directly; catalog data keeps coming from Lakbay.AvailabilityApi throughout — no repointing.</p></div></div>
+      </div>
+
+      <h4 style="margin-top:36px;">What happens when an editor publishes</h4>
+      <div class="diagram-wrap" style="margin-top:14px;">
+        <pre class="mermaid">
+sequenceDiagram
+    participant Editor
+    participant Cms as Lakbay.Cms<br/>(Umbraco backoffice)
+    participant SB as Service Bus<br/>lakbay-catalog-sync
+    participant Sync as Lakbay.AvailabilityApi.Sync<br/>(Azure Function)
+    participant Mongo as MongoDB
+    participant Api as Lakbay.AvailabilityApi.Api<br/>(GraphQL)
+    participant Web as Lakbay.Web
+
+    Editor->>Cms: Edit + Publish a Product
+    Cms->>Cms: CatalogPublishSyncHandler<br/>resolves Content Pickers → CatalogSyncEvent
+    Cms->>SB: send message
+    SB-->>Sync: ServiceBusTrigger fires
+    Sync->>Mongo: field-scoped $set<br/>(never AvailableCount — ADR-0014)
+    Web->>Api: GraphQL query (next page load)
+    Api->>Mongo: read
+    Api-->>Web: updated product
+        </pre>
+        <div class="diagram-caption">No redeploy, no code change — publishing in the CMS is the only action a content editor ever takes.</div>
+      </div>
+      <div class="callout" style="margin-top:14px;"><strong>Why field-scoped, not a full document replace:</strong> Product has two independent writers — Cms owns catalog fields, Lakbay.Booking will own <code class="inline">availableCount</code> (Phase 4). A blind overwrite from either side would clobber the other's data. See ADR-0014.</div>
+    </section>
+
+    <!-- ============ 04 LOCAL INFRASTRUCTURE ============ -->
+    <section id="infrastructure">
+      <div class="section-head">
+        <span class="eyebrow">04 — Running it locally</span>
+        <h2>Local infrastructure — what's in Docker</h2>
+        <p class="lede">Docker only ever runs infrastructure here — databases and a message broker. Every application runs natively (<code class="inline">dotnet run</code> / <code class="inline">npm run dev</code> / <code class="inline">func start</code>) for fast hot-reload and a normal debugger attach.</p>
+      </div>
+
+      <div class="grid cols-2" style="margin-top:8px;">
+        <div class="card infra-card">
+          <h3>🗄️ lakbay_sqlserver <span class="port-tag">1433</span></h3>
+          <p class="desc">SQL Server Developer Edition — custom build from <span class="repo-chip">Lakbay.Cms/Database/</span>, trimmed from the official Umbraco compose template to database-only.</p>
+          <div class="kv">
+            <div class="row"><dt>Started by</dt><dd><span class="repo-chip">Lakbay.Cms</span> docker-compose.yml</dd></div>
+            <div class="row"><dt>Used by</dt><dd>Lakbay.Cms (<code class="inline">umbracoDb</code>) &amp; Lakbay.Booking (<code class="inline">lakbayBookingDb</code>) — one shared instance, two fully separate databases (ADR-0003)</dd></div>
+            <div class="row"><dt>Auth</dt><dd>SA password via <code class="inline">.env</code> → <code class="inline">dotnet user-secrets</code>, never appsettings.json</dd></div>
+          </div>
+        </div>
+
+        <div class="card infra-card">
+          <h3>🍃 lakbay_mongo <span class="port-tag">27017</span></h3>
+          <p class="desc">Stock <code class="inline">mongo:8</code>, no auth — genuinely disposable local data, nothing secret to protect.</p>
+          <div class="kv">
+            <div class="row"><dt>Started by</dt><dd><span class="repo-chip">Lakbay.AvailabilityApi</span> docker-compose.yml</dd></div>
+            <div class="row"><dt>Read by</dt><dd>Lakbay.AvailabilityApi.Api (GraphQL resolvers)</dd></div>
+            <div class="row"><dt>Written by</dt><dd>Lakbay.AvailabilityApi.Sync <em>only</em> — the query API never writes (ADR-0009)</dd></div>
+          </div>
+        </div>
+
+        <div class="card infra-card">
+          <h3>📮 lakbay_servicebus <span class="port-tag">5672</span> <span class="port-tag">5300</span></h3>
+          <p class="desc">Microsoft's official Azure Service Bus Emulator — same wire protocol as real Azure Service Bus, zero cloud account needed.</p>
+          <div class="kv">
+            <div class="row"><dt>Queue</dt><dd><code class="inline">lakbay-catalog-sync</code>, defined in <span class="repo-chip">servicebus-emulator-config.json</span></dd></div>
+            <div class="row"><dt>Publisher</dt><dd>Lakbay.Cms (on content publish, ADR-0013)</dd></div>
+            <div class="row"><dt>Consumer</dt><dd>Lakbay.AvailabilityApi.Sync (<code class="inline">CatalogSyncFunction</code>)</dd></div>
+          </div>
+        </div>
+
+        <div class="card infra-card sqledge">
+          <h3>🔧 lakbay_servicebus_sqledge</h3>
+          <p class="desc">Required companion database the emulator uses to persist its own queue metadata. Not exposed to the host — nothing talks to it directly.</p>
+          <div class="kv">
+            <div class="row"><dt>Image</dt><dd>mcr.microsoft.com/azure-sql-edge</dd></div>
+            <div class="row"><dt>You'll never</dt><dd>connect to this yourself — it's plumbing for lakbay_servicebus</dd></div>
+          </div>
+        </div>
+      </div>
+
+      <h4 style="margin-top:32px;">Verifying the Service Bus emulator actually picked up the queue</h4>
+      <pre class="code">docker logs lakbay_servicebus --tail 20
+<span class="c"># look for: "Emulator Service is Successfully Up!"
+# and confirmation the "lakbay-catalog-sync" queue was created</span></pre>
+
+      <div class="callout warn" style="margin-top:18px;"><strong>Not part of this platform:</strong> if you see <code class="inline">testcontainers-ryuk-*</code> or a randomly-named Mongo container in Docker Desktop, that's <span class="repo-chip">Lakbay.AvailabilityApi.Tests</span> spinning up an ephemeral database for <code class="inline">dotnet test</code> — self-cleans within seconds. Still there minutes later? The test run was killed mid-way; safe to remove.</div>
+    </section>
+
+    <!-- ============ 05 SETUP WALKTHROUGH ============ -->
+    <section id="setup">
+      <div class="section-head">
+        <span class="eyebrow">05 — Running it locally</span>
+        <h2>Setup walkthrough</h2>
+        <p class="lede">One dependency-ordered pass, first time on this machine. Every command here has actually been run — nothing is assumed.</p>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-body">
+            <h4>Prerequisites</h4>
+            <p>.NET SDK 10, Node.js 20+, Docker Desktop, Azure Functions Core Tools (<code class="inline">func</code>).</p>
+            <pre class="code">winget install Microsoft.DotNet.SDK.10
+winget install OpenJS.NodeJS
+winget install -e --id Docker.DockerDesktop
+npm install -g azure-functions-core-tools@4 --unsafe-perm true</pre>
+            <div class="callout warn"><strong>Docker Desktop's first launch:</strong> complete its onboarding screen before trying <code class="inline">docker</code> commands. If <code class="inline">docker ps</code> hangs for minutes, check <code class="inline">%APPDATA%\Docker\settings-store.json</code> for <code class="inline">"DisplayedOnboarding": false</code> — that's the actual blocker, not a slow backend.</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-body">
+            <h4>Lakbay.Contracts — the shared schema</h4>
+            <p>No dependencies, no database. Everything else references this.</p>
+            <pre class="code">cd Lakbay.Contracts/typescript && npm install && npm run codegen && npx tsc --noEmit
+cd ../csharp && dotnet build</pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-body">
+            <h4>Lakbay.Cms — Umbraco 18</h4>
+            <p>SQL Server, then user-secrets for both the DB connection and the Service Bus emulator.</p>
+            <pre class="code">cp .env.example .env   <span class="c"># set DB_PASSWORD</span>
+docker compose up -d
+cd src/Lakbay.Cms.Web
+dotnet user-secrets set "ConnectionStrings:umbracoDbDSN" "Server=localhost,1433;Database=umbracoDb;User Id=sa;Password=&lt;yours&gt;;TrustServerCertificate=true"
+dotnet user-secrets set "ConnectionStrings:ServiceBus" "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+dotnet run</pre>
+            <p>First run only: complete Umbraco's install wizard at <code class="inline">https://localhost:44330/umbraco</code> — real email, real password, your choice. Never scripted, never recorded anywhere.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-body">
+            <h4>Lakbay.AvailabilityApi — read model + sync consumer</h4>
+            <p>Mongo and the Service Bus emulator together, then the Sync function <em>before</em> the query API.</p>
+            <pre class="code">docker compose up -d   <span class="c"># mongo + servicebus emulator</span>
+cd src/Lakbay.AvailabilityApi.Sync &amp;&amp; func start
+<span class="c"># — separate terminal —</span>
+cd src/Lakbay.AvailabilityApi.Api &amp;&amp; dotnet run   <span class="c"># :5170</span></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-body">
+            <h4>Lakbay.Web — the storefront</h4>
+            <pre class="code">npm install &amp;&amp; npm run build &amp;&amp; npm run dev   <span class="c"># :3000</span></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-body">
+            <h4>Prove it end to end</h4>
+            <p>With all five running: open Lakbay.Cms's backoffice, edit a product's summary, publish. Reload the same product's detail page in Lakbay.Web — the new text should appear with <strong>zero code change and zero redeploy</strong>. That's Phase 3's actual proof, not just "it compiles."</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 06 TROUBLESHOOTING ============ -->
+    <section id="troubleshooting">
+      <div class="section-head">
+        <span class="eyebrow">06 — Running it locally</span>
+        <h2>Troubleshooting</h2>
+        <p class="lede">Symptom → most likely file. All of these are real bugs this project actually hit, not hypothetical.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table id="troubleTable">
+          <thead><tr><th style="width:34%">Symptom</th><th style="width:12%">Kind</th><th>Check first</th></tr></thead>
+          <tbody>
+            <tr><td>Storefront shows zero products</td><td><span class="sev env">Expected</span></td><td>Is Lakbay.Cms running and has anything been published? The old auto-seed is retired — an empty Mongo is normal until Cms publishes something.</td></tr>
+            <tr><td>A product's data doesn't match what's in Cms</td><td><span class="sev common">Common</span></td><td>Check <code class="inline">docker logs lakbay_servicebus</code> and the Sync function's console — is the message actually being consumed?</td></tr>
+            <tr><td>GraphQL works via curl, fails from Lakbay.Web</td><td><span class="sev common">Common</span></td><td>CORS allow-list in <code class="inline">appsettings.Development.json</code>, or the <code class="inline">ProductFilter</code> vs. <code class="inline">ProductFilterInput</code> naming trap — see <code class="inline">ProductFilterInputType.cs</code>.</td></tr>
+            <tr><td>A Cms field shows <code class="inline">umb://document/…</code> instead of real data</td><td><span class="sev common">Common</span></td><td>A Content Picker being read as plain text instead of resolved — see <code class="inline">CatalogPublishSyncHandler.ResolvePickedContent</code>.</td></tr>
+            <tr><td><code class="inline">dotnet run</code> fails with a file lock on <code class="inline">.exe</code></td><td><span class="sev common">Common</span></td><td>A previous run is still alive. Kill the <em>exact PID</em> the error names — never a blanket <code class="inline">taskkill /IM dotnet.exe</code>, it kills unrelated processes too.</td></tr>
+            <tr><td>Docker container won't start</td><td><span class="sev env">Environment</span></td><td>Docker Desktop stuck on its own first-run dialog — see the Local Infrastructure section above.</td></tr>
+            <tr><td>Tests pass individually but data looks shared between them</td><td><span class="sev common">Fixed 2026-09-08</span></td><td><code class="inline">Program.cs</code> used to read Mongo config <em>before</em> WebApplicationFactory's per-test override applied — every test silently hit the real local database. Fixed by binding lazily inside the DI factory delegate.</td></tr>
+            <tr><td>MongoDB test error: "db name must be at most 63 characters"</td><td><span class="sev common">Fixed 2026-09-08</span></td><td>A long <code class="inline">[CallerMemberName]</code> test name, once prefixed. <code class="inline">CatalogQueryTests.DatabaseNameFor</code> truncates + hashes for names over the limit.</td></tr>
+            <tr><td>A fresh Umbraco install throws "No data type found for built-in property editor"</td><td><span class="sev common">Fixed 2026-09-08</span></td><td>Not every built-in editor ships a pre-created data type (confirmed for <code class="inline">Umbraco.Decimal</code>). <code class="inline">CatalogContentTypeSeeder.GetBuiltInDataTypeAsync</code> creates one on demand.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 07 FEATURE MAP ============ -->
+    <section id="feature-map">
+      <div class="section-head">
+        <span class="eyebrow">07 — Finding your way</span>
+        <h2>Feature map</h2>
+        <p class="lede">Find the row closest to what you're investigating, go straight to the file. Type in the search box (top-left, or here) to filter.</p>
+      </div>
+
+      <div class="filter-row">
+        <input class="table-search" id="featureFilter" type="text" placeholder="Filter by feature, file, repo…">
+        <span class="count" id="featureCount"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table id="featureTable">
+          <thead><tr><th style="width:16%">Repo</th><th style="width:20%">Feature</th><th style="width:32%">File</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><span class="repo-chip">Web</span></td><td class="feat">Homepage — product-line cards</td><td><span class="file">src/app/page.tsx</span><span class="fn">Home()</span></td><td>Zero hard-coded lines — driven by <code class="inline">useGetProductLinesQuery</code></td></tr>
+            <tr><td><span class="repo-chip">Web</span></td><td class="feat">Collection page</td><td><span class="file">src/app/collections/[code]/page.tsx</span><span class="fn">CollectionPage()</span></td><td>Filters via <code class="inline">useGetProductsQuery({ productLine })</code></td></tr>
+            <tr><td><span class="repo-chip">Web</span></td><td class="feat">Holiday detail page</td><td><span class="file">src/app/holidays/[slug]/page.tsx</span><span class="fn">HolidayPage()</span></td><td>Price bands, board basis, hero image banner, accommodation card, included/optional activities</td></tr>
+            <tr><td><span class="repo-chip">Web</span></td><td class="feat">Formatting helpers</td><td><span class="file">src/lib/catalog.ts</span><span class="fn">formatPhp, formatDate, boardBasisLabel, destinationLocation</span></td><td><code class="inline">destinationLocation</code> avoids "Coron, Palawan, Palawan" — real bug fixed 2026-09-08</td></tr>
+            <tr><td><span class="repo-chip">Web</span></td><td class="feat">GraphQL client</td><td><span class="file">src/lib/availabilityApi.ts</span><span class="fn">availabilityApi (RTK Query)</span></td><td>Check field selection here first if a page is missing data the schema has</td></tr>
+            <tr><td><span class="repo-chip">Web</span></td><td class="feat">Hero image hosts</td><td><span class="file">next.config.ts</span><span class="fn">images.remotePatterns</span></td><td>New external image host? Add it here or next/image 400s silently</td></tr>
+            <tr><td><span class="repo-chip">AvailabilityApi</span></td><td class="feat">GraphQL resolvers</td><td><span class="file">src/Lakbay.AvailabilityApi.Api/Query.cs</span><span class="fn">class Query</span></td><td>Hand-built Mongo filters, not [UseFiltering] — ADR-0007</td></tr>
+            <tr><td><span class="repo-chip">AvailabilityApi</span></td><td class="feat">ProductFilter naming fix</td><td><span class="file">src/Lakbay.AvailabilityApi.Api/ProductFilterInputType.cs</span><span class="fn">ProductFilterInputType</span></td><td>Fixes a real HotChocolate default-naming bug</td></tr>
+            <tr><td><span class="repo-chip">AvailabilityApi</span></td><td class="feat">Mongo access layer</td><td><span class="file">src/Lakbay.AvailabilityApi.Shared/CatalogContext.cs</span><span class="fn">CatalogContext</span></td><td>Shared between query API &amp; Sync function (ADR-0009)</td></tr>
+            <tr><td><span class="repo-chip">AvailabilityApi</span></td><td class="feat">Mongo ↔ C# type mapping</td><td><span class="file">.../Shared/MongoClassMaps.cs</span><span class="fn">MongoClassMaps.Register()</span></td><td>ADR-0014 explains the IgnoreExtraElements calls</td></tr>
+            <tr><td><span class="repo-chip">AvailabilityApi</span></td><td class="feat">Test-only seed data</td><td><span class="file">src/Lakbay.AvailabilityApi.Api/CatalogSeeder.cs</span><span class="fn">SeedIfEmptyAsync</span></td><td>Not auto-run anymore — only Tests calls it now</td></tr>
+            <tr><td><span class="repo-chip">AvailabilityApi</span></td><td class="feat">Sync consumer</td><td><span class="file">src/Lakbay.AvailabilityApi.Sync/CatalogSyncFunction.cs</span><span class="fn">CatalogSyncFunction.Run</span></td><td>Field-scoped $set, never a whole-document replace (ADR-0014)</td></tr>
+            <tr><td><span class="repo-chip">AvailabilityApi</span></td><td class="feat">CORS for Lakbay.Web</td><td><span class="file">Program.cs, appsettings.Development.json</span><span class="fn">Cors:AllowedOrigins</span></td><td>#1 cause of "works in curl, fails in browser"</td></tr>
+            <tr><td><span class="repo-chip">Cms</span></td><td class="feat">Products-tree document types</td><td><span class="file">src/Lakbay.Cms.Web/Catalog/CatalogContentTypeSeeder.cs</span><span class="fn">HandleAsync</span></td><td>Code-first, idempotent — no-ops once types exist</td></tr>
+            <tr><td><span class="repo-chip">Cms</span></td><td class="feat">Real seed content</td><td><span class="file">.../CatalogContentTypeSeeder.cs</span><span class="fn">SeedRealContentAsync</span></td><td>Set LAKBAY_FORCE_RESEED_CATALOG=true to force a redo</td></tr>
+            <tr><td><span class="repo-chip">Cms</span></td><td class="feat">Publish → Service Bus</td><td><span class="file">src/Lakbay.Cms.Web/Catalog/CatalogPublishSyncHandler.cs</span><span class="fn">HandleAsync, ResolvePickedContent</span></td><td>Resolving Content Pickers correctly is the trickiest part</td></tr>
+            <tr><td><span class="repo-chip">Cms</span></td><td class="feat">Service Bus transport</td><td><span class="file">.../Catalog/ServiceBusCatalogSyncPublisher.cs</span><span class="fn">ServiceBusCatalogSyncPublisher</span></td><td>Connection string via ConnectionStrings:ServiceBus user-secret</td></tr>
+            <tr><td><span class="repo-chip">Cms</span></td><td class="feat">Wire registration</td><td><span class="file">src/Lakbay.Cms.Web/Catalog/CatalogComposer.cs</span><span class="fn">Compose</span></td><td>Auto-discovered via Program.cs's AddComposers()</td></tr>
+            <tr><td><span class="repo-chip">Contracts</span></td><td class="feat">Canonical schema</td><td><span class="file">schema/lakbay.graphql</span></td><td>Change a field → check every implementer &amp; consumer</td></tr>
+            <tr><td><span class="repo-chip">Contracts</span></td><td class="feat">Sync event shape</td><td><span class="file">csharp/CatalogSyncEvent.cs, CatalogEntityType.cs</span></td><td>One event type, EntityType discriminates the payload</td></tr>
+            <tr><td><span class="repo-chip">Contracts</span></td><td class="feat">Accommodation + activities fields</td><td><span class="file">csharp/Product.cs</span><span class="fn">AccommodationName, IncludedActivities, OptionalActivities</span></td><td>Not <code class="inline">required</code> — nullable/default-empty so existing seed data keeps compiling (ADR-0016)</td></tr>
+            <tr><td><span class="repo-chip">Cms</span></td><td class="feat">Activity list parsing</td><td><span class="file">.../Catalog/CatalogPublishSyncHandler.cs</span><span class="fn">ParseActivityLines</span></td><td>Newline-per-activity Textarea, not JSON — simpler than <code class="inline">priceBands</code> since there's no nested shape to preserve</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 08 ADRs ============ -->
+    <section id="adrs">
+      <div class="section-head">
+        <span class="eyebrow">08 — Finding your way</span>
+        <h2>Architecture decision records</h2>
+        <p class="lede">The "why" behind every structural seam, in the order they were made. Full text lives in <span class="repo-chip">Lakbay.Docs/docs/adr/</span>.</p>
+      </div>
+
+      <div class="filter-row">
+        <input class="table-search" id="adrFilter" type="text" placeholder="Filter decisions…">
+        <span class="count" id="adrCount"></span>
+      </div>
+
+      <div class="adr-list" id="adrList">
+        <div class="adr-row"><div class="num">0001</div><div><div class="title">Unify ECMS + PCMS</div><div class="summary">Content and product-catalog trees live in one Umbraco solution — the biggest cost lever vs. a Hotelplan-style split.</div></div><div class="repos"><span class="repo-chip">Cms</span></div></div>
+        <div class="adr-row"><div class="num">0002</div><div><div class="title">CQRS inside Booking</div><div class="summary">Commands and queries as separate MediatR handlers.</div></div><div class="repos"><span class="repo-chip">Booking</span></div></div>
+        <div class="adr-row"><div class="num">0003</div><div><div class="title">Separate booking data</div><div class="summary">Bookings never live in Cms's database — read-heavy publish vs. write-heavy transactions don't mix.</div></div><div class="repos"><span class="repo-chip">Booking</span><span class="repo-chip">Cms</span></div></div>
+        <div class="adr-row"><div class="num">0004</div><div><div class="title">.NET, not Node, for the search service</div><div class="summary">One backend language across the whole platform (Cms, Booking, Contracts, AvailabilityApi).</div></div><div class="repos"><span class="repo-chip">AvailabilityApi</span></div></div>
+        <div class="adr-row"><div class="num">0005</div><div><div class="title">Local SQL Server, not Azure SQL</div><div class="summary">Azure SQL Database has no offline edition — Docker locally, Azure only once a live environment exists.</div></div><div class="repos"><span class="repo-chip">Cms</span><span class="repo-chip">Booking</span></div></div>
+        <div class="adr-row"><div class="num">0006</div><div><div class="title">Headless CMS, no Razor UI</div><div class="summary">Cms never renders a page — Lakbay.Web owns 100% of presentation, on purpose.</div></div><div class="repos"><span class="repo-chip">Cms</span><span class="repo-chip">Web</span></div></div>
+        <div class="adr-row"><div class="num">0007</div><div><div class="title">AvailabilityApi is real, not a mock</div><div class="summary">Permanently deployed, modeled on Hotelplan's api-sphinx — not a disposable throwaway.</div></div><div class="repos"><span class="repo-chip">AvailabilityApi</span></div></div>
+        <div class="adr-row"><div class="num">0008</div><div><div class="title">Real-time availability propagation</div><div class="summary">Booking → Service Bus → AvailabilityApi → SignalR → Web — no polling.</div></div><div class="repos"><span class="repo-chip">Booking</span><span class="repo-chip">AvailabilityApi</span><span class="repo-chip">Web</span></div></div>
+        <div class="adr-row"><div class="num">0009</div><div><div class="title">Split query-serving from event-consumption</div><div class="summary">Two deployables in one repo so sync load never competes with shoppers' queries.</div></div><div class="repos"><span class="repo-chip">AvailabilityApi</span></div></div>
+        <div class="adr-row"><div class="num">0010</div><div><div class="title">Last-write-wins sync ordering</div><div class="summary">A sourceUpdatedUtc timestamp guard, since Service Bus doesn't guarantee strict ordering.</div></div><div class="repos"><span class="repo-chip">AvailabilityApi</span></div></div>
+        <div class="adr-row"><div class="num">0011</div><div><div class="title">Atomic availability decrement</div><div class="summary">A single conditional SQL UPDATE prevents double-booking — never read-then-write.</div></div><div class="repos"><span class="repo-chip">Booking</span></div></div>
+        <div class="adr-row"><div class="num">0012</div><div><div class="title">Block rendering in React</div><div class="summary">A block registry maps Umbraco element-type alias to React component — no Razor involved.</div></div><div class="repos"><span class="repo-chip">Web</span><span class="repo-chip">Cms</span></div></div>
+        <div class="adr-row"><div class="num">0013</div><div><div class="title">Cms sync trigger is Service Bus</div><div class="summary">Reuses the Sync function ADR-0009 already scaffolded — one consumption mechanism for the whole platform.</div></div><div class="repos"><span class="repo-chip">Cms</span><span class="repo-chip">AvailabilityApi</span></div></div>
+        <div class="adr-row"><div class="num">0014</div><div><div class="title">Product's dual-writer ordering fix</div><div class="summary">A second internal ordering field so Cms and Booking's writes can never falsely reject each other.</div></div><div class="repos"><span class="repo-chip">AvailabilityApi</span></div></div>
+        <div class="adr-row"><div class="num">0015</div><div><div class="title">Content sections are JSON, not a real Block List</div><div class="summary">A real Umbraco Block List round-tripped correctly through SQL but the Content Delivery API silently returned zero items — pivoted to the already-proven JSON-in-Textarea pattern.</div></div><div class="repos"><span class="repo-chip">Cms</span><span class="repo-chip">Web</span></div></div>
+        <div class="adr-row"><div class="num">0016</div><div><div class="title">Accommodation + included/optional activities on Product</div><div class="summary">Researched Inghams/Inntravel/Santa's Lapland — a holiday is a named stay plus a split of included-vs-optional activities, not just a destination.</div></div><div class="repos"><span class="repo-chip">Contracts</span><span class="repo-chip">Cms</span><span class="repo-chip">AvailabilityApi</span><span class="repo-chip">Web</span></div></div>
+      </div>
+    </section>
+
+    <!-- ============ 09 FOR AI AGENTS ============ -->
+    <section id="agents">
+      <div class="section-head">
+        <span class="eyebrow">09 — Finding your way</span>
+        <h2>For AI agents</h2>
+        <p class="lede">If you're an AI coding agent picking up work here, this is the fast path — read this before touching code.</p>
+      </div>
+
+      <div class="prose">
+        <h4>Reading order</h4>
+        <ul>
+          <li><span class="repo-chip">Lakbay.Docs/docs/01_CLAUDE.md</span> — the platform operating manual. Wins over anything else if they conflict, unless the user overrides it explicitly in-session.</li>
+          <li><span class="repo-chip">04_TASKS.md</span> — current phase and status, more current than this page's snapshot.</li>
+          <li>The repo's own <span class="repo-chip">CLAUDE.md</span> — points to exactly which ADRs that repo must honor. Don't read every ADR for every task.</li>
+          <li><span class="repo-chip">05_DEVLOG.md</span>'s most recent entries — what changed since the build plan was last touched.</li>
+        </ul>
+        <h4>Working conventions this codebase actually enforces</h4>
+        <ul>
+          <li><strong>Every non-obvious structural choice gets an ADR</strong> — a new abstraction, a SOLID trade-off, a design pattern. Not optional here.</li>
+          <li><strong>Verify by running it</strong>, not by reading the code. Most real bugs this project found (see Troubleshooting) were only caught by actually publishing, querying, or booting something — a clean compile was never treated as proof.</li>
+          <li><strong>Kill processes by exact PID</strong>, never by name — this codebase has been bitten twice by a blanket <code class="inline">taskkill /IM dotnet.exe</code> killing unrelated services.</li>
+          <li><strong>Open items get surfaced, not silently resolved</strong> — see <span class="repo-chip">01_CLAUDE.md</span> §6 for the standing list (GraphQL-on-Umbraco package choice, GitHub remotes, business model).</li>
+        </ul>
+        <h4>This page vs. the repo</h4>
+        <p>This HTML page is a snapshot, generated for human onboarding and quick navigation — the markdown files in <span class="repo-chip">Lakbay.Docs/docs/</span> (<span class="repo-chip">06_SYSTEM_ARCHITECTURE.md</span>, <span class="repo-chip">08_LOCAL_INFRASTRUCTURE.md</span>, <span class="repo-chip">09_FEATURE_MAP.md</span>) are the canonical, versioned source an agent should actually read from disk — they update with the code; this page updates when someone remembers to regenerate it. It's checked into <span class="repo-chip">Lakbay.Docs/docs/index.html</span> itself (not just published as a standalone Artifact) so it travels with the repo and can be served as a static page (GitHub Pages, or just opened locally) without depending on anything outside the clone.</p>
+      </div>
+    </section>
+
+    <footer>
+      Lakbay Developer Atlas — generated from the platform's own docs, 2026-09-08. Canonical source: <span class="repo-chip">Lakbay.Docs/docs/</span>. Not a substitute for reading the repo.
+    </footer>
+  </main>
+</div>
+
+<script>
+(function(){
+  // active section highlighting
+  const links = Array.from(document.querySelectorAll('nav.toc a'));
+  const sections = links.map(l => document.querySelector(l.getAttribute('href')));
+  function onScroll(){
+    let idx = 0;
+    const y = window.scrollY + 120;
+    sections.forEach((s,i) => { if (s && s.offsetTop <= y) idx = i; });
+    links.forEach((l,i) => l.classList.toggle('active', i===idx));
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  // global search: filters nav + feature/adr/trouble tables
+  const search = document.getElementById('globalSearch');
+  const featureFilter = document.getElementById('featureFilter');
+  const adrFilter = document.getElementById('adrFilter');
+
+  function filterRows(tbodySelector, query, countEl){
+    const rows = Array.from(document.querySelectorAll(tbodySelector));
+    let shown = 0;
+    rows.forEach(r => {
+      const match = !query || r.textContent.toLowerCase().includes(query);
+      r.toggleAttribute('data-hidden', !match);
+      if (match) shown++;
+    });
+    if (countEl) countEl.textContent = shown + ' / ' + rows.length;
+  }
+
+  function filterNav(query){
+    links.forEach(l => {
+      const hay = (l.getAttribute('data-title') || '') + ' ' + l.textContent;
+      const match = !query || hay.toLowerCase().includes(query);
+      l.toggleAttribute('data-hidden', !match);
+    });
+  }
+
+  function runGlobal(){
+    const q = search.value.trim().toLowerCase();
+    filterNav(q);
+    filterRows('#featureTable tbody tr', q, document.getElementById('featureCount'));
+    filterRows('#adrList .adr-row', q, document.getElementById('adrCount'));
+    filterRows('#troubleTable tbody tr', q, null);
+  }
+  search.addEventListener('input', runGlobal);
+
+  featureFilter.addEventListener('input', () => {
+    filterRows('#featureTable tbody tr', featureFilter.value.trim().toLowerCase(), document.getElementById('featureCount'));
+  });
+  adrFilter.addEventListener('input', () => {
+    filterRows('#adrList .adr-row', adrFilter.value.trim().toLowerCase(), document.getElementById('adrCount'));
+  });
+
+  // init counts
+  document.getElementById('featureCount').textContent = document.querySelectorAll('#featureTable tbody tr').length + ' features';
+  document.getElementById('adrCount').textContent = document.querySelectorAll('#adrList .adr-row').length + ' decisions';
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.16.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  // Standalone Mermaid rendering for the two diagrams above — this page
+  // is checked into the repo and opened directly (or via GitHub Pages),
+  // not through the Artifact viewer, so it can't rely on that platform's
+  // injected /_runtime/mermaid module; loads the same pinned version from
+  // a public CDN instead. Matches the page's own single dark palette
+  // (see :root above) rather than switching with the viewer's OS theme,
+  // for the same "always looks the same regardless of where it's opened"
+  // reason the rest of the page commits to one theme.
+  if (typeof mermaid === 'undefined') return;
+
+  var palette = {
+    background: '#121b1a',
+    mainBkg: '#182322',
+    primaryColor: '#182322',
+    primaryTextColor: '#eef0ea',
+    lineColor: '#7d8983',
+    primaryBorderColor: '#3c4c49',
+    nodeBorder: '#3c4c49',
+    clusterBorder: '#3c4c49',
+    edgeLabelBackground: '#121b1a',
+    clusterBkg: 'rgba(127,127,127,0.07)',
+    titleColor: '#eef0ea'
+  };
+
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'strict',
+    theme: 'base',
+    themeVariables: palette,
+    themeCSS: '.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
+  });
+
+  var blocks = Array.prototype.slice.call(document.querySelectorAll('pre.mermaid'));
+  blocks.forEach(function(pre, i){
+    var id = 'lakbay-mermaid-' + i;
+    mermaid.render(id, pre.textContent || '').then(function(result){
+      var mount = document.createElement('div');
+      mount.className = 'mermaid-diagram';
+      mount.innerHTML = result.svg;
+      pre.parentNode.insertBefore(mount, pre);
+      pre.style.display = 'none';
+    }).catch(function(){
+      // Leave the raw diagram source visible as a fallback — never a
+      // blank section — if rendering fails (e.g. no network for the CDN).
+    });
+  });
+})();
+</script>
+</body>
+</html>

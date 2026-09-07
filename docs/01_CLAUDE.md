@@ -39,6 +39,42 @@ final branding/trademark is a marketing decision, not a technical one):
 - **Parul** ("lantern", Kapampangan) — festive/light tourism: Pampanga's Giant Lantern Festival, Panagbenga, Sinulog
 - **Pamana** ("heritage/legacy") — living heritage & culture: Vigan, Ifugao Rice Terraces, Intramuros
 
+**"Philippines-first," not "Philippines-only":** the data model must not
+hard-code "Philippines" anywhere load-bearing (country is a property on a
+destination node, never an assumption baked into templates/schema) — that's
+what keeps a later Southeast-Asia expansion a content exercise, not a
+rebuild. "First" names the launch market, not a permanent ceiling.
+
+**Competitive landscape** (real platforms already selling PH holiday
+packages online, researched September 2026 — full detail and sourcing in
+the Blueprint's Competitive Landscape section): closest comparable is
+**Guide to the Philippines** (self-described "Philippines' biggest travel
+marketplace" — PH-only curated packages, installment payments, island/
+heritage/highland categories), structurally a *marketplace* aggregating
+third-party operators, versus Lakbay's MVP as a single vertically-integrated
+tour operator (the Inghams/Hotelplan shape). Other players checked:
+Exploring Tourism Philippines/TraveloPhilippines (independently arrived at
+a near-identical "Highland to Island" split — corroborates the cluster
+segmentation), WayPH.com (flagged "Questionable" by a third-party trust
+scorer — a caution, not a template), and global marketplaces (Klook,
+GetYourGuide, Agoda, Traveloka) which aren't Philippines-first by
+definition. None of them segment their catalog into culturally-named,
+seasonal themed clusters the way Alon/Amihan/Parul/Pamana does.
+
+**Update — 2026-09-08 (ADR-0019/ADR-0020):** the comparison above
+describes the MVP's original shape — a single vertically-integrated tour
+operator selling curated packages. Two features built since then move
+Lakbay structurally closer to a *hybrid* of Guide to the Philippines and
+Klook specifically: `Accommodation` is now independently searchable and
+bookable on its own (the `/stays` flow — real Room Types with photos,
+real Philippine accommodation categories, long-stay pricing), not only
+reachable inside a curated package; and a fixed-price local `Activity`
+marketplace (one per destination, every inclusion itemized and agreed
+upfront — the direct Klook/GetYourGuide pattern) lets a traveler build a
+trip without a rigid itinerary. Curated packages (`Product`) still exist
+as a secondary, ready-made option — additive, not a pivot. See ADR-0019
+and ADR-0020 for the full research and design record.
+
 ## 2. Repo map
 
 | Repo | Role | Stack |
@@ -167,6 +203,13 @@ own `CLAUDE.md`.
    this repo must honor."
 5. Check the most recent [05_DEVLOG.md](05_DEVLOG.md) entries for
    anything that changed since the build plan was last touched.
+6. Setting up local dev for the first time, or need to know what's
+   running in Docker and why?
+   [07_MANUAL_SETUP_GUIDE.md](07_MANUAL_SETUP_GUIDE.md) (linear
+   walkthrough) and [08_LOCAL_INFRASTRUCTURE.md](08_LOCAL_INFRASTRUCTURE.md)
+   (each container explained). Triaging a bug or picking up a feature?
+   [09_FEATURE_MAP.md](09_FEATURE_MAP.md) indexes straight from
+   "what's broken" to the file/class responsible, across all repos.
 
 ## 6. Open items (do not silently resolve these — surface them)
 
@@ -184,7 +227,5 @@ own `CLAUDE.md`.
   deliberately left open.
 - Regulatory: Philippine DOT accreditation requirements for listed
   operators — legal check, can gate launch, not an engineering task.
-- Exact sync trigger from `Lakbay.Cms` to `Lakbay.AvailabilityApi` (Umbraco
-  content-cache-refresher event, Service Bus message, or scheduled
-  Hangfire job) — flagged as genuine new scope by ADR-0007, not yet
-  decided. Needs deciding before Phase 1 is considered done.
+- ~~Exact sync trigger from `Lakbay.Cms` to `Lakbay.AvailabilityApi`~~ —
+  **decided 2026-09-08: Azure Service Bus, see ADR-0013.**
