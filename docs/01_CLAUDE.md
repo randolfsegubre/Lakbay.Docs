@@ -221,11 +221,11 @@ own `CLAUDE.md`.
 - Exact GraphQL-on-Umbraco package for `Lakbay.Cms` (community package vs.
   a hand-rolled resolver layer over the Content Delivery API) — needs a
   short spike before `Lakbay.Contracts` schema v0 is treated as locked.
-- GitHub remotes now exist for all six original repos (confirmed
-  2026-09-07 — this line previously said "no remotes exist yet," which had
-  gone stale since the 2026-09-03 Phase 0 note above without anyone
-  updating it). `Lakbay.AgentDesktop`/`Lakbay.AgentOps` need their own
-  remotes created when they're scaffolded (ADR-0021).
+- GitHub remotes now exist for all eight repos, including
+  `Lakbay.AgentDesktop`/`Lakbay.AgentOps` (created 2026-09-08 alongside
+  ADR-0021's scaffolding) — this line previously said "no remotes exist
+  yet," which had gone stale since the 2026-09-03 Phase 0 note above
+  without anyone updating it.
 - Business model: proprietary tour operator vs. later opening to
   third-party listings (marketplace/OTA) — different unit economics,
   deliberately left open.
