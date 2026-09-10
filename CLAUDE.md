@@ -7,14 +7,20 @@ real documentation before touching anything.
 **Read, in this order, before doing anything else:**
 
 1. [docs/01_CLAUDE.md](docs/01_CLAUDE.md) — the platform AI operating
-   manual. Constitution for the whole Lakbay estate (all six repos); if
-   anything else conflicts with it, it wins unless the user explicitly
+   manual. Constitution for the whole Lakbay estate (eight repos now,
+   including the Agent Channel's `Lakbay.AgentDesktop`/`Lakbay.AgentOps`);
+   if anything else conflicts with it, it wins unless the user explicitly
    overrides it in the current conversation.
 2. [docs/04_TASKS.md](docs/04_TASKS.md) — what phase the platform is on
    right now and what's left in it.
 3. The most recent entries at the top of
    [docs/05_DEVLOG.md](docs/05_DEVLOG.md) — what happened in the last few
    sessions, and why.
+4. [WALKTHROUGH.md](WALKTHROUGH.md) — the accessible, narrative version of
+   "how do the repos actually talk to each other" — three real scenarios
+   traced end to end (a catalog publish, a booking, an agent-assisted
+   booking), for building a working mental model fast rather than piecing
+   it together from ADRs one at a time.
 
 Everything else under `docs/` — the phased [02_BUILD_PLAN.md](docs/02_BUILD_PLAN.md),
 the [03_ARCHITECTURE_AND_PATTERNS_GUIDE.md](docs/03_ARCHITECTURE_AND_PATTERNS_GUIDE.md),
@@ -34,9 +40,10 @@ any conflict between the two as the markdown being right.
 
 **This repo has no application code.** If you were pointed here while
 working inside `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.Web`,
-`Lakbay.AvailabilityApi`, or `Lakbay.Contracts`, that repo's own `CLAUDE.md` is
-the one that should have loaded automatically — come back here only for
-the platform-wide "why."
+`Lakbay.AvailabilityApi`, `Lakbay.Contracts`, `Lakbay.AgentDesktop`, or
+`Lakbay.AgentOps`, that repo's own `CLAUDE.md`/`WALKTHROUGH.md` is what
+should have loaded automatically — come back here only for the
+platform-wide "why."
 
 **End of session:** before finishing any session that changed a plan,
 phase status, or made a new architectural decision, update

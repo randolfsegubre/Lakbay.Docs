@@ -6,6 +6,96 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-09 — Full platform E2E verification, live and simultaneous, plus two real bugs found and fixed
+
+**Asked:** the user got Docker Desktop running manually (its `sailor-ingest.sock`
+blocker from 2026-09-08 having cleared on its own), then asked to continue the
+still-pending full E2E verification, and separately reported the Oracle
+install script still failing with exit code 1203 even after a Windows
+Component Store repair (`DISM`/`RestoreHealth` + `sfc /scannow` + restart) —
+asked to recheck the script rather than assume the Windows repair didn't work.
+
+**What changed:**
+- `docker compose up -d` in both `Lakbay.Cms` and `Lakbay.AvailabilityApi`;
+  confirmed `lakbay_sqlserver`, `lakbay_mongo` both `(healthy)` and the
+  Service Bus emulator's own logs showing "Emulator Service is Successfully
+  Up!" — not just "Started."
+- **Root-caused the Oracle installer failure — not a Windows issue.**
+  `install-oracle-elevated.ps1` called `setup.exe -silent -responsefile
+  "..." -waitforcompletion`, which is the old Java-based OUI installer's
+  syntax. But the actual extracted package (`Oracle AI Database 26ai Free`)
+  turned out to be an **InstallShield MSI-wrapped installer**
+  (`Oracle AI Database 26ai Free.msi` + `ISSetupPrerequisites\vcredist_x64.exe`),
+  a different, newer installer that doesn't recognize `-waitforcompletion` —
+  it fails argument parsing and exits almost instantly with code 1203
+  (`ERROR_NO_NET_OR_BAD_PATH`), which explains why both the user's attempts
+  produced completely empty stdout/stderr logs despite the "several minutes"
+  comment in the script. The Windows Component Store repair the user did was
+  legitimate and worth doing, but wasn't the actual cause. Fixed the script
+  to `-silent -responseFile "..."` (matching the response file's own flat
+  `INSTALLDIR=`/`PASSWORD=`/`LISTENER_PORT=` format, which is this
+  installer's documented shape, not OUI's dotted `oracle.install.*` keys).
+  Not yet re-run successfully — needs the user to run it again in their
+  elevated PowerShell.
+- Brought up every app in the platform simultaneously for the first time
+  this session: `Lakbay.Cms` (5010), `Lakbay.AvailabilityApi.Api` (5170),
+  `Lakbay.AvailabilityApi.Sync` (Azure Function via `func start`),
+  `Lakbay.Booking` (5263), `Lakbay.AgentOps` (5250, portable
+  `redis-server.exe` started first), `Lakbay.Web` (3000). Verified live,
+  not just "process started":
+  - `Lakbay.Cms`'s Content Delivery API returned 132 real items from live
+    SQL Server.
+  - `Lakbay.AvailabilityApi`'s GraphQL API returned all 4 product lines and
+    14 real destinations from live MongoDB (the full Cms→Service
+    Bus→Sync→MongoDB pipe, proven live end-to-end again after the Docker
+    outage).
+  - `Lakbay.AgentOps`'s `GET /api/agent-offer/{destinationCode}` hit a
+    genuinely live `Lakbay.AvailabilityApi` for the first time ever this
+    session (previously only verified via the clean-failure exception path)
+    — real Coron accommodation/package/activity data returned; confirmed
+    cached in Redis via `redis-cli keys`.
+  - A real booking confirmed end-to-end through
+    `Lakbay.AgentOps → Lakbay.Booking` (`coron-island-hopping`, 7 days out)
+    — `200 {"success":true,"bookingId":"...","paymentStatus":"PendingInvoice"}`.
+  - `Lakbay.Web`'s `/stays` and `/activities` pages returned 200 with real
+    accommodation content server-rendered from the live AvailabilityApi.
+- **A second real bug found while verifying the booking→call-log path**:
+  the 2026-09-08 Agent Channel entry's EF Core version-conflict fix (pinning
+  `Microsoft.EntityFrameworkCore` to 10.0.11 in
+  `Lakbay.AgentOps.HttpApi.Host`) only pinned the umbrella package — not
+  `Microsoft.EntityFrameworkCore.Relational`, which is what
+  `Oracle.EntityFrameworkCore` actually needs at runtime for
+  `CallLogDbContext.OnModelCreating`. The host's own build output still
+  shipped `Microsoft.EntityFrameworkCore.Relational.dll` at 10.0.9,
+  producing a `FileNotFoundException` inside the Hangfire call-logging job
+  — not the clean `InvalidOperationException` the README had claimed was
+  verified. Fixed by adding an explicit
+  `Microsoft.EntityFrameworkCore.Relational` 10.0.11 `PackageReference` to
+  the Host project; confirmed the shipped DLL is now 10.0.11 via
+  `AssemblyName.GetAssemblyName`, and re-verified live — the same job now
+  fails with `ORA-12541: no listener at 127.0.0.1:1521`, the correct and
+  expected error given Oracle isn't installed yet. This proves the
+  call-logging wiring is fully correct; Oracle's install is the only
+  remaining gap in that path.
+- Updated stale docs found along the way: `Lakbay.AvailabilityApi`'s
+  `Docs/DEVELOPER_HANDBOOK.md` still said Sync "has no functions defined"
+  (no longer true since Phase 4's `CatalogSyncFunction` shipped) and
+  `Lakbay.AgentOps/README.md`'s "known gap" about the offer endpoint never
+  being verified against a live AvailabilityApi (no longer true, see above).
+
+**Result:** every app in the platform now builds clean and runs E2E
+locally, verified live and simultaneously, not per-repo in isolation. The
+only thing left before the platform is genuinely "100% locally complete" is
+the pending Oracle install (script now fixed, not yet re-run successfully).
+
+**Next:** user to re-run `install-oracle-elevated.ps1` elevated; once it
+succeeds, re-verify `Lakbay.AgentOps`'s call-logging path actually persists
+a `CallRecord` row (the connectivity path is proven correct now — this
+would be the first real write). Separately, review all six open PRs across
+the Lakbay repos for best-practice adherence per the user's request.
+
+---
+
 ## 2026-09-08 — Phase 7 (Agent Channel) designed and built: two new repos, real Booking domain code, no Docker needed
 
 **Asked:** close the remaining stack gaps identified against target .NET

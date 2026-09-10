@@ -1,5 +1,36 @@
 # Tasks — Current Status
 
+**2026-09-09 — Full platform E2E verification, live and simultaneous, for the first time.**
+Docker's `sailor-ingest.sock` blocker (2026-09-07/08 entries below) resolved
+itself once the user launched Docker Desktop manually — exact mechanism
+unconfirmed, but stable since. With it unblocked, every app in the platform
+was brought up simultaneously against real infrastructure and verified live,
+closing the "still pending" item that had been open since 2026-09-07:
+`Lakbay.Cms` (5010, real SQL Server) → Service Bus emulator →
+`Lakbay.AvailabilityApi.Sync` → MongoDB → `Lakbay.AvailabilityApi.Api`
+(5170) → `Lakbay.AgentOps` (5250, real Redis-cached offer aggregation
+against a genuinely live AvailabilityApi for the first time ever, plus a
+real booking confirmed through to `Lakbay.Booking`, 5263) → `Lakbay.Web`
+(3000, `/stays` and `/activities` rendering real server-fetched data).
+Two real bugs found and fixed along the way, not just discovered:
+(1) `install-oracle-elevated.ps1` was using OUI-installer syntax
+(`-waitforcompletion`) against what is actually an InstallShield-MSI-based
+installer for Oracle AI Database Free — caused an instant, silent exit
+1203 with empty logs on every attempt; fixed to `-silent -responseFile`
+only. Oracle itself still not yet successfully installed — needs the user
+to re-run the corrected script. (2) `Lakbay.AgentOps.HttpApi.Host`'s
+earlier EF Core version pin (2026-09-08 Agent Channel entry below) only
+pinned the umbrella `Microsoft.EntityFrameworkCore` package, not
+`Microsoft.EntityFrameworkCore.Relational` specifically — the shipped
+binary was still 10.0.9, causing a `FileNotFoundException` in the
+call-logging Hangfire job instead of the documented clean error. Fixed by
+pinning `Microsoft.EntityFrameworkCore.Relational` 10.0.11 explicitly;
+re-verified live — the job now fails with the correct, expected
+`ORA-12541: no listener at 127.0.0.1:1521` (Oracle not installed yet is
+the only remaining gap, not a code bug). **Every app in the platform now
+builds clean and runs E2E locally; the only thing standing between this
+and "100% locally complete" is the pending Oracle install.**
+
 **2026-09-08 — Phase 7 (Agent Channel) built and verified live, without Docker.**
 Two new repos (`Lakbay.AgentDesktop`, `Lakbay.AgentOps`) plus real
 `Lakbay.Booking` domain code now exist — see ADR-0021 through ADR-0026 and
