@@ -1,8 +1,9 @@
 # Lakbay — Platform AI Operating Manual
 
 This file is the source of truth for any AI coding assistant (Claude Code,
-or any other LLM) working anywhere in the Lakbay estate — all six repos
-under `Personal_Projects/Lakbay/`. Read it before writing code in any of
+or any other LLM) working anywhere in the Lakbay estate — all eight repos
+under `Personal_Projects/Lakbay/` (six original plus `Lakbay.AgentDesktop`/
+`Lakbay.AgentOps`, ADR-0021). Read it before writing code in any of
 them. It supersedes generic defaults — where it's specific, follow it over
 a more "standard" pattern you might otherwise reach for.
 
@@ -39,6 +40,42 @@ final branding/trademark is a marketing decision, not a technical one):
 - **Parul** ("lantern", Kapampangan) — festive/light tourism: Pampanga's Giant Lantern Festival, Panagbenga, Sinulog
 - **Pamana** ("heritage/legacy") — living heritage & culture: Vigan, Ifugao Rice Terraces, Intramuros
 
+**"Philippines-first," not "Philippines-only":** the data model must not
+hard-code "Philippines" anywhere load-bearing (country is a property on a
+destination node, never an assumption baked into templates/schema) — that's
+what keeps a later Southeast-Asia expansion a content exercise, not a
+rebuild. "First" names the launch market, not a permanent ceiling.
+
+**Competitive landscape** (real platforms already selling PH holiday
+packages online, researched September 2026 — full detail and sourcing in
+the Blueprint's Competitive Landscape section): closest comparable is
+**Guide to the Philippines** (self-described "Philippines' biggest travel
+marketplace" — PH-only curated packages, installment payments, island/
+heritage/highland categories), structurally a *marketplace* aggregating
+third-party operators, versus Lakbay's MVP as a single vertically-integrated
+tour operator (the Inghams/Hotelplan shape). Other players checked:
+Exploring Tourism Philippines/TraveloPhilippines (independently arrived at
+a near-identical "Highland to Island" split — corroborates the cluster
+segmentation), WayPH.com (flagged "Questionable" by a third-party trust
+scorer — a caution, not a template), and global marketplaces (Klook,
+GetYourGuide, Agoda, Traveloka) which aren't Philippines-first by
+definition. None of them segment their catalog into culturally-named,
+seasonal themed clusters the way Alon/Amihan/Parul/Pamana does.
+
+**Update — 2026-09-08 (ADR-0019/ADR-0020):** the comparison above
+describes the MVP's original shape — a single vertically-integrated tour
+operator selling curated packages. Two features built since then move
+Lakbay structurally closer to a *hybrid* of Guide to the Philippines and
+Klook specifically: `Accommodation` is now independently searchable and
+bookable on its own (the `/stays` flow — real Room Types with photos,
+real Philippine accommodation categories, long-stay pricing), not only
+reachable inside a curated package; and a fixed-price local `Activity`
+marketplace (one per destination, every inclusion itemized and agreed
+upfront — the direct Klook/GetYourGuide pattern) lets a traveler build a
+trip without a rigid itinerary. Curated packages (`Product`) still exist
+as a secondary, ready-made option — additive, not a pivot. See ADR-0019
+and ADR-0020 for the full research and design record.
+
 ## 2. Repo map
 
 | Repo | Role | Stack |
@@ -48,6 +85,8 @@ final branding/trademark is a marketing decision, not a technical one):
 | `Lakbay.Booking` | Orders, basket, availability calendar, payment orchestration — deliberately separate from the CMS | .NET minimal API |
 | `Lakbay.Web` | Public storefront: marketing pages, catalog browsing, booking flow | Next.js, Redux Toolkit + RTK Query |
 | `Lakbay.AvailabilityApi` | Real, permanently deployed product-search service — denormalized read model synced from `Lakbay.Cms`, modeled on Hotelplan's `api-sphinx`/Manticore. **Not a mock** (renamed from `Lakbay.MockApi`) | ASP.NET Core, HotChocolate, MongoDB.Driver |
+| `Lakbay.AgentDesktop` | Call-center agent tool: caller screen-pop, live availability browse, direct phone booking (ADR-0021/0022/0023) | WPF/MVVM, Unity Container, WCF (`TelephonyBridge`) |
+| `Lakbay.AgentOps` | Backend for the agent channel: sessions, call logging, cached agent-shaped catalog aggregation, live availability push (ADR-0025) | ABP Framework, Hangfire, Redis, SignalR, Oracle (call log) + SQL Server |
 | `Lakbay.Contracts` | Shared GraphQL SDL schema + generated TS/C# types, versioned as a package | Schema + codegen |
 
 ## 3. The load-bearing architecture decisions
@@ -167,6 +206,13 @@ own `CLAUDE.md`.
    this repo must honor."
 5. Check the most recent [05_DEVLOG.md](05_DEVLOG.md) entries for
    anything that changed since the build plan was last touched.
+6. Setting up local dev for the first time, or need to know what's
+   running in Docker and why?
+   [07_MANUAL_SETUP_GUIDE.md](07_MANUAL_SETUP_GUIDE.md) (linear
+   walkthrough) and [08_LOCAL_INFRASTRUCTURE.md](08_LOCAL_INFRASTRUCTURE.md)
+   (each container explained). Triaging a bug or picking up a feature?
+   [09_FEATURE_MAP.md](09_FEATURE_MAP.md) indexes straight from
+   "what's broken" to the file/class responsible, across all repos.
 
 ## 6. Open items (do not silently resolve these — surface them)
 
@@ -175,16 +221,15 @@ own `CLAUDE.md`.
 - Exact GraphQL-on-Umbraco package for `Lakbay.Cms` (community package vs.
   a hand-rolled resolver layer over the Content Delivery API) — needs a
   short spike before `Lakbay.Contracts` schema v0 is treated as locked.
-- No GitHub remotes exist yet for any of the six repos — local-only as of
-  the Phase 0 scaffolding session (2026-09-03). Creating remotes is a
-  separate, explicit decision (see [[working-style]] on GitHub token
-  scope) — don't assume it's wanted without asking.
+- GitHub remotes now exist for all eight repos, including
+  `Lakbay.AgentDesktop`/`Lakbay.AgentOps` (created 2026-09-08 alongside
+  ADR-0021's scaffolding) — this line previously said "no remotes exist
+  yet," which had gone stale since the 2026-09-03 Phase 0 note above
+  without anyone updating it.
 - Business model: proprietary tour operator vs. later opening to
   third-party listings (marketplace/OTA) — different unit economics,
   deliberately left open.
 - Regulatory: Philippine DOT accreditation requirements for listed
   operators — legal check, can gate launch, not an engineering task.
-- Exact sync trigger from `Lakbay.Cms` to `Lakbay.AvailabilityApi` (Umbraco
-  content-cache-refresher event, Service Bus message, or scheduled
-  Hangfire job) — flagged as genuine new scope by ADR-0007, not yet
-  decided. Needs deciding before Phase 1 is considered done.
+- ~~Exact sync trigger from `Lakbay.Cms` to `Lakbay.AvailabilityApi`~~ —
+  **decided 2026-09-08: Azure Service Bus, see ADR-0013.**

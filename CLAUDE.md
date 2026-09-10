@@ -22,6 +22,16 @@ and the individual records under [docs/adr/](docs/adr/) — is living
 reference, pulled in when the phase or task at hand calls for it, not read
 cover-to-cover up front.
 
+**`docs/index.html`** — the "Lakbay Developer Atlas," a single-file
+rendered snapshot for human onboarding (overview, architecture diagrams,
+setup walkthrough, a searchable feature map, troubleshooting table, ADR
+list). Open it directly in a browser, or serve it — it's plain,
+dependency-free HTML/CSS/JS (Mermaid loads from a public CDN), so GitHub
+Pages can serve it as-is from this folder with no build step. It's a
+snapshot, not a source: the markdown files above are what to read and
+edit; this file only gets manually regenerated to match them, so treat
+any conflict between the two as the markdown being right.
+
 **This repo has no application code.** If you were pointed here while
 working inside `Lakbay.Cms`, `Lakbay.Booking`, `Lakbay.Web`,
 `Lakbay.AvailabilityApi`, or `Lakbay.Contracts`, that repo's own `CLAUDE.md` is
