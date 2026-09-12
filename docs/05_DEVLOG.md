@@ -61,14 +61,61 @@ before acting, then restored it.
   class of Windows AF_UNIX socket cleanup bug). Needed an actual machine
   reboot, which resolved it immediately after.
 
-**PRs:** `Lakbay.Booking` [#2](https://github.com/randolfsegubre/Lakbay.Booking/pull/2),
-`Lakbay.AgentOps` [#2](https://github.com/randolfsegubre/Lakbay.AgentOps/pull/2)
-— both open, not yet merged. `Lakbay.AgentOps`#2 depends on `Lakbay.Booking`#2.
+**PRs, all merged same session:** `Lakbay.Booking` [#2](https://github.com/randolfsegubre/Lakbay.Booking/pull/2),
+`Lakbay.AgentOps` [#2](https://github.com/randolfsegubre/Lakbay.AgentOps/pull/2),
+`Lakbay.Docs` [#3](https://github.com/randolfsegubre/Lakbay.Docs/pull/3).
 
-**Next:** merge both PRs (Booking first). If a future gRPC integration is
-added anywhere else on this platform, set the client `BaseUrl` to the
-HTTPS origin from the outset — this exact mistake shipped once already and
-only a live call caught it.
+## 2026-09-12 (continued) — Full platform E2E re-verified live, closing every item left over from the 2026-09-09 pass
+
+**Asked:** continuation of the same portfolio-wide E2E pass, once Docker was
+back (see the reboot above) — finish the pieces the 2026-09-09 entry hadn't
+reached yet: `/stays`, `/activities`, a collection page, the Umbraco
+backoffice, AgentOps offer aggregation, and a real booking-confirm flow.
+
+**What was verified, all live, one app at a time (`docker compose up -d` in
+`Lakbay.Cms` and `Lakbay.AvailabilityApi`, a standalone `redis` container for
+`Lakbay.AgentOps`, each app torn down before starting the next):**
+- **`Lakbay.Cms`**: booted clean (100 seed keys, 264 cached document URLs).
+  `/` itself 404s, correctly — this is a headless CMS (ADR-0006), nothing
+  should render there. Content Delivery API (`/umbraco/delivery/api/v2/content`)
+  returned 132 real content items; backoffice (`/umbraco/`) loads.
+- **`Lakbay.AvailabilityApi`**: `Lakbay.AvailabilityApi.Sync` (the Azure
+  Function) started clean against the real Service Bus emulator; the GraphQL
+  API returned all 14 real products with correct names/slugs — confirming
+  the full Cms → Service Bus → Sync → Mongo → GraphQL pipeline is intact.
+  `availableCount: 0`/`isSoldOut: true` on every real product is expected,
+  not a bug: Booking's own availability-decrement field (ADR-0014) was only
+  ever populated for its own small demo dataset (`coron-island-hopping`,
+  `boracay-getaway` — different slugs from the real catalog's), since real
+  online checkout was never built (ADR-0026 stubs `IPaymentGateway`).
+- **`Lakbay.Web`**: real browser session against the running app. Homepage
+  (four collections), the Islands collection page (5 real products, prices,
+  accommodation), a product detail page (Coron Island Hopping — price bands,
+  included/optional activities, "Book this holiday — coming in Phase 4"
+  correctly shown instead of a fake working checkout button), `/stays` (14
+  real accommodations across every destination, filterable by type/tag), and
+  `/activities` (real per-activity fixed pricing, itemized inclusions) all
+  render correctly with real synced data, not placeholders.
+- **`Lakbay.AgentOps` offer aggregation**: `GET /api/agent-offer/{destinationId}`
+  against a real destination (El Nido) correctly aggregated across three
+  separate GraphQL collections (accommodations/products/activities) into one
+  response — the actual `IAgentOfferAppService`/`AvailabilityApiClient` code
+  path, not a stub.
+- **Real booking-confirm flow**: covered by the ADR-0027 restore work above —
+  a real AgentOps → gRPC → Booking confirm call, live, both directions.
+- **Not covered**: `Lakbay.AgentDesktop` (WPF) has no automated or headless
+  verification path available in this session (no Windows-desktop GUI
+  automation tool, only browser automation) — its own `AgentDesktopController`
+  contract was exercised directly via HTTP above instead, which is the same
+  integration surface the desktop app itself calls.
+
+**Next:** `Lakbay.AgentDesktop`'s actual WPF UI remains the one piece of the
+platform never verified by literally running it and looking at the screen —
+worth doing directly on this machine (not through an AI session) if that
+matters before showing the platform to anyone. Otherwise, the platform is
+demoable end-to-end as of this entry, provided all five services are started
+in the order used here (`Cms` and `AvailabilityApi`'s docker-compose stacks,
+Redis, then `Booking`/`AgentOps` HTTPS profiles, then `Lakbay.Web`).
 
 ---
 
