@@ -6,6 +6,72 @@ Format: date, what was asked, what changed and why, what's next.
 
 ---
 
+## 2026-09-12 — ADR-0027 gRPC work recovered after an unexplained history rewrite, and a real bug found live that neither side's own tests had caught
+
+**Asked:** as part of a portfolio-wide E2E testing pass, a prior session's
+memory flagged that ADR-0027 (Agent Channel confirm-booking over gRPC,
+2026-09-10) had been silently wiped from both `Lakbay.Booking` and
+`Lakbay.AgentOps` by a `git filter-branch` + force-push with no record of
+who ran it or why (discovered 2026-09-11). Confirmed the finding was still
+accurate (`git log`/`grep` on current `master` in both repos: zero `.proto`
+files, zero gRPC references, `AgentDesktopController` back to plain REST)
+before acting, then restored it.
+
+**What changed:**
+- Both commits (`Lakbay.Booking` `fb38267`, `Lakbay.AgentOps` `f18958d`)
+  were still present in each repo's local object database and reachable via
+  `git reflog` on this machine — nothing was actually lost, just orphaned.
+  Confirmed via `git show -s --format=%T` that the rewritten commits'
+  parents had byte-identical trees to the originals (the AI-attribution
+  cleanup rewrite touched only commit messages, never file content), so
+  both commits cherry-picked cleanly onto current `master` with zero
+  conflicts. Branches: `randolf/restore-adr-0027-grpc` in both repos.
+- `Lakbay.Booking`: `dotnet build` clean, `dotnet test` 11/11 passing
+  (LocalDB-backed, no Docker needed) — including the real
+  `BookingConfirmGrpcServiceTests.cs` integration test.
+- `Lakbay.AgentOps`: `dotnet build` clean (from `aspnet-core/`, not the repo
+  root — no top-level `.sln`), `dotnet test` 3/3 passing.
+- **A real, previously-unverified bug found and fixed by actually running
+  both services and making a live cross-process call**, not just
+  build/unit-testing each side in isolation (which is as far as this
+  feature had ever been verified before, per the original 2026-09-10
+  entry's own "both sides build clean" phrasing): `Lakbay.AgentOps`'s
+  `Booking:BaseUrl` pointed at `Lakbay.Booking`'s plain-HTTP port (5263),
+  but gRPC's HTTP/2 negotiation over a shared origin needs TLS/ALPN — the
+  registration code's own comment already said as much. Fixed to point at
+  the HTTPS port (7137); see ADR-0027 (now written up properly — it had
+  never actually been committed to this repo either, despite being
+  referenced throughout the restored code).
+- **Confirmed working end-to-end**, both services running as real,
+  separate processes (not `WebApplicationFactory`): a genuine
+  `POST /api/bookings/confirm` call to `Lakbay.AgentOps` for
+  `boracay-getaway` (seeded `AvailableCount = 1`) went out over gRPC to
+  `Lakbay.Booking`, decremented availability, and returned a real booking
+  id and `PendingInvoice` status; a second call against the same slot was
+  correctly rejected ("This slot is no longer available"), proving
+  ADR-0011's atomic decrement holds through this transport, not just
+  REST. `GET /api/bookings/{id}` on `Lakbay.Booking` directly confirmed
+  the persisted record.
+- Also hit the exact `sailor-ingest.sock` Docker Desktop crash this log's
+  2026-09-09 entry already named as a recurring issue on this machine
+  (there for AgentOps's Redis dependency, unrelated to gRPC itself) — this
+  time it did not clear on its own; killing all Docker processes and
+  `wsl --shutdown` didn't release the stale socket file either (`Remove-Item`
+  failed silently even with nothing holding it, consistent with a known
+  class of Windows AF_UNIX socket cleanup bug). Needed an actual machine
+  reboot, which resolved it immediately after.
+
+**PRs:** `Lakbay.Booking` [#2](https://github.com/randolfsegubre/Lakbay.Booking/pull/2),
+`Lakbay.AgentOps` [#2](https://github.com/randolfsegubre/Lakbay.AgentOps/pull/2)
+— both open, not yet merged. `Lakbay.AgentOps`#2 depends on `Lakbay.Booking`#2.
+
+**Next:** merge both PRs (Booking first). If a future gRPC integration is
+added anywhere else on this platform, set the client `BaseUrl` to the
+HTTPS origin from the outset — this exact mistake shipped once already and
+only a live call caught it.
+
+---
+
 ## 2026-09-09 — Full platform E2E verification, live and simultaneous, plus two real bugs found and fixed
 
 **Asked:** the user got Docker Desktop running manually (its `sailor-ingest.sock`
